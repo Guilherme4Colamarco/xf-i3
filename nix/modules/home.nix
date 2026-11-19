@@ -334,7 +334,7 @@ in
       "autostart/skippy-xd.desktop".text = mkAutostart {
         name = "Overview (skippy-xd)";
         comment = "Daemon do overview: guarda miniaturas das janelas para o Super+Tab";
-        exec = "${skippyXd}/bin/skippy-xd --start-daemon";
+        exec = ''sh -c "DISPLAY=\\''${DISPLAY%%.0} exec ${skippyXd}/bin/skippy-xd --start-daemon"'';
         icon = "preferences-system-windows";
       };
     }

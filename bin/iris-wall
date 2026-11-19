@@ -162,7 +162,7 @@ mkdir -p "$HOME/.config/btop/themes" && install -m 644 "$CACHE/btop.theme" "$HOM
 # overview (skippy-xd): cores ao vivo se o daemon estiver rodando
 mkdir -p "$HOME/.config/skippy-xd" && install -m 644 "$CACHE/skippy-xd.rc" "$HOME/.config/skippy-xd/skippy-xd.rc"
 if command -v skippy-xd >/dev/null && pgrep -f 'skippy-xd --start-daemon' >/dev/null; then
-    timeout 3 skippy-xd --config-reload >/dev/null 2>&1 || true
+    DISPLAY="${DISPLAY%.0}" timeout 3 skippy-xd --config-reload >/dev/null 2>&1 || true
 fi
 
 # o slot antigo fica no disco para a próxima troca

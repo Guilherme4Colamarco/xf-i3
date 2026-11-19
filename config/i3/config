@@ -150,8 +150,8 @@ bindsym $mod+Shift+period exec --no-startup-id $bin/i3-ws move-next
 bindsym $mod+n exec --no-startup-id $bin/i3-ws new
 bindsym $mod+Shift+n exec --no-startup-id $bin/i3-ws move-new
 # overview (skippy-xd): todos os workspaces / só as janelas do atual
-bindsym $mod+Tab exec --no-startup-id skippy-xd --paging
-bindsym $mod+Shift+Tab exec --no-startup-id skippy-xd --expose
+bindsym $mod+Tab exec --no-startup-id DISPLAY=${DISPLAY%.0} skippy-xd --paging
+bindsym $mod+Shift+Tab exec --no-startup-id DISPLAY=${DISPLAY%.0} skippy-xd --expose
 
 # ── programas ────────────────────────────────────────────────────────────────
 bindsym $mod+Return exec --no-startup-id $term
