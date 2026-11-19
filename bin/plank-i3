@@ -1,0 +1,617 @@
+#!/usr/bin/env python3
+"""plank-i3: destaca a dock do Plank do i3 via override_redirect.
+
+O Plank (inclusive plank-reloaded) cria uma janela X11 alta com área
+transparente em cima para caber o zoom dos ícones. Como ela usa
+_NET_WM_WINDOW_TYPE_DOCK, o i3 reserva essa altura inteira na dockarea e
+deixa um espaço vazio permanente acima da barra.
+
+Este helper:
+  1. Encontra janelas do Plank com tipo _NET_WM_WINDOW_TYPE_DOCK (ignorando
+     a janela de Preferências).
+  2. Faz withdraw + aplica override_redirect=1 + remapeia na mesma posição
+     absoluta, removendo a reserva de espaço do i3.
+  3. Mantém a dock acima das janelas normais (e abaixo de janelas em tela
+     cheia, rofi e xfce4-appfinder).
+"""
+
+from __future__ import annotations
+
+import argparse
+import ctypes
+from ctypes import (
+    CFUNCTYPE,
+    POINTER,
+    Structure,
+    Union,
+    byref,
+    c_char_p,
+    c_int,
+    c_long,
+    c_ubyte,
+    c_uint,
+    c_ulong,
+    c_void_p,
+    cast,
+    string_at,
+)
+import os
+import select
+import signal
+import subprocess
+import sys
+import time
+
+# Constantes de /usr/include/X11/X.h
+CWOverrideRedirect = 1 << 9
+SubstructureNotifyMask = 1 << 19
+PropertyChangeMask = 1 << 22
+IsViewable = 2
+AnyPropertyType = 0
+DestroyNotify = 17
+MapNotify = 19
+ReparentNotify = 21
+PropertyNotify = 28
+
+# Tipos básicos X11 em x86_64 Linux
+Window = c_ulong
+Atom = c_ulong
+Pixmap = c_ulong
+Colormap = c_ulong
+Cursor = c_ulong
+Time = c_ulong
+Bool = c_int
+Status = c_int
+DisplayPtr = c_void_p
+
+
+class XSetWindowAttributes(Structure):
+    _fields_ = [
+        ("background_pixmap", Pixmap),
+        ("background_pixel", c_ulong),
+        ("border_pixmap", Pixmap),
+        ("border_pixel", c_ulong),
+        ("bit_gravity", c_int),
+        ("win_gravity", c_int),
+        ("backing_store", c_int),
+        ("backing_planes", c_ulong),
+        ("backing_pixel", c_ulong),
+        ("save_under", Bool),
+        ("event_mask", c_long),
+        ("do_not_propagate_mask", c_long),
+        ("override_redirect", Bool),
+        ("colormap", Colormap),
+        ("cursor", Cursor),
+    ]
+
+
+class XWindowAttributes(Structure):
+    _fields_ = [
+        ("x", c_int),
+        ("y", c_int),
+        ("width", c_int),
+        ("height", c_int),
+        ("border_width", c_int),
+        ("depth", c_int),
+        ("visual", c_void_p),
+        ("root", Window),
+        ("c_class", c_int),
+        ("bit_gravity", c_int),
+        ("win_gravity", c_int),
+        ("backing_store", c_int),
+        ("backing_planes", c_ulong),
+        ("backing_pixel", c_ulong),
+        ("save_under", Bool),
+        ("colormap", Colormap),
+        ("map_installed", Bool),
+        ("map_state", c_int),
+        ("all_event_masks", c_long),
+        ("your_event_mask", c_long),
+        ("do_not_propagate_mask", c_long),
+        ("override_redirect", Bool),
+        ("screen", c_void_p),
+    ]
+
+
+class XPropertyEvent(Structure):
+    _fields_ = [
+        ("type", c_int),
+        ("serial", c_ulong),
+        ("send_event", Bool),
+        ("display", DisplayPtr),
+        ("window", Window),
+        ("atom", Atom),
+        ("time", Time),
+        ("state", c_int),
+    ]
+
+
+class XMapEvent(Structure):
+    _fields_ = [
+        ("type", c_int),
+        ("serial", c_ulong),
+        ("send_event", Bool),
+        ("display", DisplayPtr),
+        ("event", Window),
+        ("window", Window),
+        ("override_redirect", Bool),
+    ]
+
+
+class XDestroyWindowEvent(Structure):
+    _fields_ = [
+        ("type", c_int),
+        ("serial", c_ulong),
+        ("send_event", Bool),
+        ("display", DisplayPtr),
+        ("event", Window),
+        ("window", Window),
+    ]
+
+
+class XReparentEvent(Structure):
+    _fields_ = [
+        ("type", c_int),
+        ("serial", c_ulong),
+        ("send_event", Bool),
+        ("display", DisplayPtr),
+        ("event", Window),
+        ("window", Window),
+        ("parent", Window),
+        ("x", c_int),
+        ("y", c_int),
+        ("override_redirect", Bool),
+    ]
+
+
+class XEvent(Union):
+    _fields_ = [
+        ("type", c_int),
+        ("xdestroywindow", XDestroyWindowEvent),
+        ("xmap", XMapEvent),
+        ("xreparent", XReparentEvent),
+        ("xproperty", XPropertyEvent),
+        ("pad", c_long * 24),
+    ]
+
+
+class XClassHint(Structure):
+    _fields_ = [
+        ("res_name", c_void_p),
+        ("res_class", c_void_p),
+    ]
+
+
+_ERROR_HANDLER_TYPE = CFUNCTYPE(c_int, DisplayPtr, c_void_p)
+
+
+@_ERROR_HANDLER_TYPE
+def _noop_error_handler(_dpy: int, _err: int) -> int:
+    return 0
+
+
+def load_x11():
+    x11 = ctypes.CDLL("libX11.so.6")
+
+    x11.XOpenDisplay.argtypes = [c_char_p]
+    x11.XOpenDisplay.restype = DisplayPtr
+
+    x11.XCloseDisplay.argtypes = [DisplayPtr]
+    x11.XCloseDisplay.restype = c_int
+
+    x11.XDefaultScreen.argtypes = [DisplayPtr]
+    x11.XDefaultScreen.restype = c_int
+
+    x11.XDefaultRootWindow.argtypes = [DisplayPtr]
+    x11.XDefaultRootWindow.restype = Window
+
+    x11.XConnectionNumber.argtypes = [DisplayPtr]
+    x11.XConnectionNumber.restype = c_int
+
+    x11.XPending.argtypes = [DisplayPtr]
+    x11.XPending.restype = c_int
+
+    x11.XInternAtom.argtypes = [DisplayPtr, c_char_p, Bool]
+    x11.XInternAtom.restype = Atom
+
+    x11.XSetErrorHandler.argtypes = [c_void_p]
+    x11.XSetErrorHandler.restype = c_void_p
+
+    x11.XQueryTree.argtypes = [
+        DisplayPtr,
+        Window,
+        POINTER(Window),
+        POINTER(Window),
+        POINTER(POINTER(Window)),
+        POINTER(c_uint),
+    ]
+    x11.XQueryTree.restype = Status
+
+    x11.XGetWindowAttributes.argtypes = [DisplayPtr, Window, POINTER(XWindowAttributes)]
+    x11.XGetWindowAttributes.restype = Status
+
+    x11.XGetClassHint.argtypes = [DisplayPtr, Window, POINTER(XClassHint)]
+    x11.XGetClassHint.restype = Status
+
+    x11.XGetWindowProperty.argtypes = [
+        DisplayPtr,
+        Window,
+        Atom,
+        c_long,
+        c_long,
+        Bool,
+        Atom,
+        POINTER(Atom),
+        POINTER(c_int),
+        POINTER(c_ulong),
+        POINTER(c_ulong),
+        POINTER(POINTER(c_ubyte)),
+    ]
+    x11.XGetWindowProperty.restype = c_int
+
+    x11.XTranslateCoordinates.argtypes = [
+        DisplayPtr,
+        Window,
+        Window,
+        c_int,
+        c_int,
+        POINTER(c_int),
+        POINTER(c_int),
+        POINTER(Window),
+    ]
+    x11.XTranslateCoordinates.restype = Bool
+
+    x11.XWithdrawWindow.argtypes = [DisplayPtr, Window, c_int]
+    x11.XWithdrawWindow.restype = Status
+
+    x11.XChangeWindowAttributes.argtypes = [
+        DisplayPtr,
+        Window,
+        c_ulong,
+        POINTER(XSetWindowAttributes),
+    ]
+    x11.XChangeWindowAttributes.restype = c_int
+
+    x11.XMoveWindow.argtypes = [DisplayPtr, Window, c_int, c_int]
+    x11.XMoveWindow.restype = c_int
+
+    x11.XMapRaised.argtypes = [DisplayPtr, Window]
+    x11.XMapRaised.restype = c_int
+
+    x11.XRaiseWindow.argtypes = [DisplayPtr, Window]
+    x11.XRaiseWindow.restype = c_int
+
+    x11.XLowerWindow.argtypes = [DisplayPtr, Window]
+    x11.XLowerWindow.restype = c_int
+
+    x11.XSelectInput.argtypes = [DisplayPtr, Window, c_long]
+    x11.XSelectInput.restype = c_int
+
+    x11.XNextEvent.argtypes = [DisplayPtr, POINTER(XEvent)]
+    x11.XNextEvent.restype = c_int
+
+    x11.XFlush.argtypes = [DisplayPtr]
+    x11.XFlush.restype = c_int
+
+    x11.XSync.argtypes = [DisplayPtr, Bool]
+    x11.XSync.restype = c_int
+
+    x11.XFree.argtypes = [c_void_p]
+    x11.XFree.restype = c_int
+
+    return x11
+
+
+def get_class_hint(x11, dpy: int, wid: int) -> tuple[str, str]:
+    hint = XClassHint()
+    if not x11.XGetClassHint(dpy, wid, byref(hint)):
+        return ("", "")
+    try:
+        name = string_at(hint.res_name).decode("utf-8", "replace") if hint.res_name else ""
+        cls = string_at(hint.res_class).decode("utf-8", "replace") if hint.res_class else ""
+        return (name.lower(), cls.lower())
+    finally:
+        if hint.res_name:
+            x11.XFree(hint.res_name)
+        if hint.res_class:
+            x11.XFree(hint.res_class)
+
+
+def get_atom_list_property(x11, dpy: int, wid: int, prop_atom: int, max_items: int = 32) -> list[int]:
+    actual_type = Atom()
+    actual_format = c_int()
+    nitems = c_ulong()
+    bytes_after = c_ulong()
+    prop_ptr = POINTER(c_ubyte)()
+
+    rc = x11.XGetWindowProperty(
+        dpy,
+        wid,
+        prop_atom,
+        0,
+        max_items,
+        False,
+        AnyPropertyType,
+        byref(actual_type),
+        byref(actual_format),
+        byref(nitems),
+        byref(bytes_after),
+        byref(prop_ptr),
+    )
+    if rc != 0 or not prop_ptr:
+        return []
+    try:
+        if actual_format.value != 32 or nitems.value == 0:
+            return []
+        arr = cast(prop_ptr, POINTER(Atom))
+        return [arr[i] for i in range(nitems.value)]
+    finally:
+        x11.XFree(prop_ptr)
+
+
+def get_parent(x11, dpy: int, wid: int) -> int:
+    root_ret = Window()
+    parent_ret = Window()
+    children = POINTER(Window)()
+    nchildren = c_uint()
+    if not x11.XQueryTree(dpy, wid, byref(root_ret), byref(parent_ret), byref(children), byref(nchildren)):
+        return 0
+    if children:
+        x11.XFree(children)
+    return int(parent_ret.value)
+
+
+def is_plank_dock(x11, dpy: int, wid: int, atom_wtype: int, atom_dock: int) -> bool:
+    res_name, res_class = get_class_hint(x11, dpy, wid)
+    if res_class != "plank" and res_name != "plank":
+        return False
+    wtypes = get_atom_list_property(x11, dpy, wid, atom_wtype, max_items=16)
+    return atom_dock in wtypes
+
+
+def find_plank_docks(x11, dpy: int, root: int, atom_wtype: int, atom_dock: int) -> list[int]:
+    found: list[int] = []
+
+    def walk(parent: int, depth: int) -> None:
+        if depth > 4:
+            return
+        root_ret = Window()
+        parent_ret = Window()
+        children = POINTER(Window)()
+        nchildren = c_uint()
+        if not x11.XQueryTree(
+            dpy, parent, byref(root_ret), byref(parent_ret), byref(children), byref(nchildren)
+        ):
+            return
+        try:
+            child_ids = [int(children[i]) for i in range(nchildren.value)] if children else []
+        finally:
+            if children:
+                x11.XFree(children)
+
+        for wid in child_ids:
+            if is_plank_dock(x11, dpy, wid, atom_wtype, atom_dock):
+                found.append(wid)
+            elif depth < 4:
+                walk(wid, depth + 1)
+
+    walk(root, 1)
+    return found
+
+
+def detach_dock(x11, dpy: int, root: int, screen: int, wid: int) -> bool:
+    attrs = XWindowAttributes()
+    if not x11.XGetWindowAttributes(dpy, wid, byref(attrs)):
+        return False
+
+    parent = get_parent(x11, dpy, wid)
+    if parent == 0:
+        return False
+
+    if attrs.override_redirect != 0 and parent == root:
+        return True
+
+    if attrs.map_state != IsViewable:
+        return False
+
+    abs_x = c_int()
+    abs_y = c_int()
+    child_ret = Window()
+    if not x11.XTranslateCoordinates(dpy, wid, root, 0, 0, byref(abs_x), byref(abs_y), byref(child_ret)):
+        return False
+
+    x11.XWithdrawWindow(dpy, wid, screen)
+    x11.XSync(dpy, False)
+
+    deadline = time.monotonic() + 1.5
+    while time.monotonic() < deadline:
+        parent = get_parent(x11, dpy, wid)
+        if parent == root:
+            break
+        if parent == 0:
+            return False
+        time.sleep(0.02)
+
+    swa = XSetWindowAttributes()
+    swa.override_redirect = 1
+    x11.XChangeWindowAttributes(dpy, wid, CWOverrideRedirect, byref(swa))
+    x11.XMoveWindow(dpy, wid, abs_x.value, abs_y.value)
+    x11.XMapRaised(dpy, wid)
+    x11.XSync(dpy, False)
+    return True
+
+
+def sync_stacking(
+    x11,
+    dpy: int,
+    root: int,
+    dock_windows: set[int],
+    atom_active: int,
+    atom_wm_state: int,
+    atom_fullscreen: int,
+) -> None:
+    if not dock_windows:
+        return
+
+    active_list = get_atom_list_property(x11, dpy, root, atom_active, max_items=1)
+    active_win = active_list[0] if active_list else 0
+
+    if active_win != 0:
+        wm_states = get_atom_list_property(x11, dpy, active_win, atom_wm_state, max_items=32)
+        if atom_fullscreen in wm_states:
+            for wid in list(dock_windows):
+                x11.XLowerWindow(dpy, wid)
+            x11.XFlush(dpy)
+            return
+
+        res_name, res_class = get_class_hint(x11, dpy, active_win)
+        if res_name in {"rofi", "xfce4-appfinder"} or res_class in {"rofi", "xfce4-appfinder"}:
+            return
+
+    for wid in list(dock_windows):
+        x11.XRaiseWindow(dpy, wid)
+    x11.XFlush(dpy)
+
+
+def scan_and_detach(
+    x11,
+    dpy: int,
+    root: int,
+    screen: int,
+    dock_windows: set[int],
+    atom_wtype: int,
+    atom_dock: int,
+) -> bool:
+    changed = False
+    for wid in find_plank_docks(x11, dpy, root, atom_wtype, atom_dock):
+        if detach_dock(x11, dpy, root, screen, wid):
+            if wid not in dock_windows:
+                dock_windows.add(wid)
+                changed = True
+    return changed
+
+
+def is_plank_running() -> bool:
+    rc = subprocess.run(
+        ["pgrep", "-x", "-u", str(os.getuid()), "plank"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode
+    return rc == 0
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Destaca a dock do Plank do i3 via override_redirect."
+    )
+    parser.add_argument(
+        "--launch",
+        action="store_true",
+        help="Inicia o plank se ainda não estiver rodando e aguarda a dock aparecer.",
+    )
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Faz apenas uma varredura inicial (sem ficar monitorando eventos).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+
+    x11 = load_x11()
+    x11.XSetErrorHandler(_noop_error_handler)
+
+    dpy = x11.XOpenDisplay(None)
+    if not dpy:
+        print("plank-i3: não foi possível abrir o display X11", file=sys.stderr)
+        return 1
+
+    running = True
+
+    def _stop(_signum: int, _frame) -> None:
+        nonlocal running
+        running = False
+
+    signal.signal(signal.SIGINT, _stop)
+    signal.signal(signal.SIGTERM, _stop)
+
+    try:
+        screen = x11.XDefaultScreen(dpy)
+        root = int(x11.XDefaultRootWindow(dpy))
+
+        atom_wtype = x11.XInternAtom(dpy, b"_NET_WM_WINDOW_TYPE", False)
+        atom_dock = x11.XInternAtom(dpy, b"_NET_WM_WINDOW_TYPE_DOCK", False)
+        atom_active = x11.XInternAtom(dpy, b"_NET_ACTIVE_WINDOW", False)
+        atom_wm_state = x11.XInternAtom(dpy, b"_NET_WM_STATE", False)
+        atom_fullscreen = x11.XInternAtom(dpy, b"_NET_WM_STATE_FULLSCREEN", False)
+        atom_stacking = x11.XInternAtom(dpy, b"_NET_CLIENT_LIST_STACKING", False)
+
+        if args.launch and not is_plank_running():
+            subprocess.Popen(
+                ["plank"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+        dock_windows: set[int] = set()
+        scan_and_detach(x11, dpy, root, screen, dock_windows, atom_wtype, atom_dock)
+
+        if args.launch and not dock_windows:
+            deadline = time.monotonic() + 5.0
+            while running and not dock_windows and time.monotonic() < deadline:
+                time.sleep(0.05)
+                scan_and_detach(x11, dpy, root, screen, dock_windows, atom_wtype, atom_dock)
+
+        sync_stacking(x11, dpy, root, dock_windows, atom_active, atom_wm_state, atom_fullscreen)
+
+        if args.once:
+            return 0
+
+        x11.XSelectInput(dpy, root, SubstructureNotifyMask | PropertyChangeMask)
+        x11.XFlush(dpy)
+        conn_fd = x11.XConnectionNumber(dpy)
+        ev = XEvent()
+
+        def handle_event() -> None:
+            etype = ev.type
+            if etype == DestroyNotify:
+                wid = int(ev.xdestroywindow.window)
+                dock_windows.discard(wid)
+            elif etype in (MapNotify, ReparentNotify):
+                wid = int(ev.xmap.window if etype == MapNotify else ev.xreparent.window)
+                if not dock_windows or is_plank_dock(x11, dpy, wid, atom_wtype, atom_dock):
+                    scan_and_detach(x11, dpy, root, screen, dock_windows, atom_wtype, atom_dock)
+                    sync_stacking(
+                        x11, dpy, root, dock_windows, atom_active, atom_wm_state, atom_fullscreen
+                    )
+            elif etype == PropertyNotify:
+                if int(ev.xproperty.window) == root and ev.xproperty.atom in (
+                    atom_active,
+                    atom_stacking,
+                ):
+                    sync_stacking(
+                        x11, dpy, root, dock_windows, atom_active, atom_wm_state, atom_fullscreen
+                    )
+
+        while running:
+            while running and x11.XPending(dpy) > 0:
+                x11.XNextEvent(dpy, byref(ev))
+                handle_event()
+            if not running:
+                break
+            try:
+                select.select([conn_fd], [], [])
+            except InterruptedError:
+                continue
+    finally:
+        x11.XCloseDisplay(dpy)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

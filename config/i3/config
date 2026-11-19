@@ -194,6 +194,7 @@ for_window [window_type="toolbar"] floating enable
 for_window [class="(?i)^(xfce4-settings-manager|xfce4-.*-settings|xfce4-display-settings|xfce4-settings-editor|xfce4-appfinder|xfce4-taskmanager|xfce4-about|xfce4-session-logout|xfce4-screensaver-preferences|xfce4-power-manager-settings|xfce4-mime-settings|xfce4-dict|xfce4-clipman-history|pavucontrol|nm-connection-editor|blueman-manager|file-roller|engrampa|lightdm-gtk-greeter-settings|qt6ct|gnome-calculator|galculator)$"] floating enable
 # diálogos do painel (preferências, propriedades de lançador) e popups de plugins
 for_window [class="(?i)^xfce4-panel$" window_type="normal"] floating enable
+for_window [class="(?i)^plank$" window_type="normal"] floating enable
 for_window [class="(?i)^wrapper-2\.0$"] floating enable, border none
 # janelas de operação/propriedades do Thunar
 for_window [class="(?i)^thunar$" title="(?i)(progress|transfer|copiando|movendo|apagando|operaç|propriedades|properties|confirm)"] floating enable
