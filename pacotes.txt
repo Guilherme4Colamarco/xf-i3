@@ -7,6 +7,7 @@ xfce4-settings
 xfconf
 xfce4-panel
 xfce4-pulseaudio-plugin
+xfce4-clipman-plugin
 xfce4-notifyd
 xfce4-power-manager
 xfce4-screensaver
@@ -34,6 +35,7 @@ jq
 libnotify
 adw-gtk-theme
 papirus-icon-theme
+qt6ct
 noto-fonts
 ttf-jetbrains-mono-nerd
 xdg-desktop-portal-gtk
@@ -47,3 +49,6 @@ eza
 fd
 btop
 fastfetch
+neovim
+yazi
+cava

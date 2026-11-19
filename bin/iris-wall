@@ -14,9 +14,36 @@ set -euo pipefail
 CACHE="$HOME/.cache/iris"
 THEMES="$HOME/.local/share/themes"
 STATE="$CACHE/wallpaper"
-WALL_DIRS=("$HOME/Imagens/Wallpapers" ${IRIS_WALL_DIRS:-})
+WALL_DIRS=("$HOME/Imagens/Wallpapers" "$HOME/Pictures/Wallpapers" "$HOME/Wallpapers")
+if [[ -n "${IRIS_WALL_DIRS:-}" ]]; then
+    if [[ "$IRIS_WALL_DIRS" == *:* ]]; then
+        IFS=: read -r -a _extra_wall_dirs <<< "$IRIS_WALL_DIRS"
+    else
+        read -r -a _extra_wall_dirs <<< "$IRIS_WALL_DIRS"
+    fi
+    WALL_DIRS+=("${_extra_wall_dirs[@]}")
+fi
 
 die() { echo "iris-wall: $*" >&2; command -v notify-send >/dev/null && notify-send -a iris-wall "iris-wall" "$*"; exit 1; }
+
+find_base_theme() {
+    local name="$1" d
+    if [[ -n "${IRIS_BASE_THEME_DIR:-}" && -f "$IRIS_BASE_THEME_DIR/$name/gtk-3.0/gtk.css" ]]; then
+        printf '%s\n' "$IRIS_BASE_THEME_DIR/$name"
+        return 0
+    fi
+    local -a data_dirs=("$HOME/.local/share")
+    local -a _xdg_dirs=()
+    IFS=: read -r -a _xdg_dirs <<< "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    data_dirs+=("${_xdg_dirs[@]}" "/usr/share")
+    for d in "${data_dirs[@]}"; do
+        [[ -n "$d" && -f "$d/themes/$name/gtk-3.0/gtk.css" ]] && {
+            printf '%s\n' "$d/themes/$name"
+            return 0
+        }
+    done
+    printf '/usr/share/themes/%s\n' "$name"
+}
 
 mode_flag=()
 img=""
@@ -79,13 +106,18 @@ if [[ "$dark" == "true" ]]; then base=adw-gtk3-dark; scheme=prefer-dark; else ba
 cur=$(xfconf-query -c xsettings -p /Net/ThemeName 2>/dev/null || true)
 [[ "$cur" == "Iris-A" ]] && slot="Iris-B" || slot="Iris-A"
 sdir="$THEMES/$slot"
+base_dir="$(find_base_theme "$base")"
 mkdir -p "$sdir/gtk-3.0" "$sdir/xfce-notify-4.0"
-cp "$CACHE/gtk3-colors.css" "$sdir/gtk-3.0/colors.css"
+install -m 644 "$CACHE/gtk3-colors.css" "$sdir/gtk-3.0/colors.css"
 for css in gtk.css gtk-dark.css; do
-    printf '@import url("file:///usr/share/themes/%s/gtk-3.0/gtk.css");\n@import url("colors.css");\n' "$base" > "$sdir/gtk-3.0/$css"
+    printf '@import url("file://%s/gtk-3.0/gtk.css");\n@import url("colors.css");\n' "$base_dir" > "$sdir/gtk-3.0/$css"
 done
-ln -sfn "/usr/share/themes/$base/gtk-3.0/assets" "$sdir/gtk-3.0/assets"
-cp "$CACHE/notify.css" "$sdir/xfce-notify-4.0/gtk.css"
+if [[ -e "$base_dir/gtk-3.0/assets" ]]; then
+    ln -sfn "$base_dir/gtk-3.0/assets" "$sdir/gtk-3.0/assets"
+else
+    rm -f "$sdir/gtk-3.0/assets"
+fi
+install -m 644 "$CACHE/notify.css" "$sdir/xfce-notify-4.0/gtk.css"
 cat > "$sdir/index.theme" <<EOF
 [Desktop Entry]
 Type=X-GNOME-Metatheme
@@ -93,12 +125,13 @@ Name=$slot
 Comment=Tema gerado pelo iris a partir de $(basename "$img")
 EOF
 
-xfconf-query -c xsettings -p /Net/ThemeName -s "$slot"
+xfconf-query -c xsettings -p /Net/ThemeName -n -t string -s "$slot"
 xfconf-query -c xfce4-notifyd -p /theme -n -t string -s "$slot"
 xfconf-query -c xfce4-panel -p /panels/dark-mode -n -t bool -s "$dark"
 
 # 4. GTK 4 / libadwaita + apps que leem gsettings ou o portal
-cp "$CACHE/gtk4.css" "$HOME/.config/gtk-4.0/gtk.css"
+mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
+install -m 644 "$CACHE/gtk4.css" "$HOME/.config/gtk-4.0/gtk.css"
 gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
 gsettings set org.gnome.desktop.interface gtk-theme "$slot" 2>/dev/null || true
 
@@ -125,9 +158,9 @@ pgrep -x i3 >/dev/null && i3-msg -q reload || true
 pkill -USR1 -x kitty 2>/dev/null || true
 # variáveis universais: todo fish aberto troca de cor na hora
 command -v fish >/dev/null && fish -c "source $CACHE/colors.fish" || true
-mkdir -p "$HOME/.config/btop/themes" && cp "$CACHE/btop.theme" "$HOME/.config/btop/themes/iris.theme"
+mkdir -p "$HOME/.config/btop/themes" && install -m 644 "$CACHE/btop.theme" "$HOME/.config/btop/themes/iris.theme"
 # overview (skippy-xd): cores ao vivo se o daemon estiver rodando
-mkdir -p "$HOME/.config/skippy-xd" && cp "$CACHE/skippy-xd.rc" "$HOME/.config/skippy-xd/skippy-xd.rc"
+mkdir -p "$HOME/.config/skippy-xd" && install -m 644 "$CACHE/skippy-xd.rc" "$HOME/.config/skippy-xd/skippy-xd.rc"
 if command -v skippy-xd >/dev/null && pgrep -f 'skippy-xd --start-daemon' >/dev/null; then
     timeout 3 skippy-xd --config-reload >/dev/null 2>&1 || true
 fi

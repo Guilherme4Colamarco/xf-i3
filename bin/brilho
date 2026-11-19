@@ -12,7 +12,11 @@
 # processo em segundo plano aplica sempre o pedido mais recente: apertar a
 # tecla várias vezes seguidas não enfileira comandos no monitor.
 set -uo pipefail
-DDC=(ddcutil --bus "${BRILHO_BUS:-3}" --noverify)   # AOC AG323FWG3R3 em /dev/i2c-3
+if [[ "${BRILHO_BUS:-3}" == "auto" ]]; then
+    DDC=(ddcutil --noverify)
+else
+    DDC=(ddcutil --bus "${BRILHO_BUS:-3}" --noverify)   # AOC AG323FWG3R3 em /dev/i2c-3
+fi
 RUN="${XDG_RUNTIME_DIR:-/tmp}/brilho"
 mkdir -p "$RUN"
 CUR="$RUN/atual" TGT="$RUN/alvo" NID="$RUN/notif-id"
@@ -74,8 +78,10 @@ case "${1:-}" in
                rofi -dmenu -i -p "Brilho" -theme-str 'window { width: 18%; } listview { lines: 11; }') || exit 0
         v=${pick%%%*}; [[ $v =~ ^[0-9]+$ ]] && { apply "$v"; osd "$v"; } ;;
     panel)
+        self="$0"
+        [[ "$self" != /* ]] && self="$(command -v brilho || echo "$HOME/.local/bin/brilho")"
         v=$(current)
-        echo "<txt> ☀ $v% </txt><txtclick>$HOME/.local/bin/brilho menu</txtclick><tool>Brilho do monitor: clique para escolher, ou Super+Ctrl+menos / Super+Ctrl+igual</tool>" ;;
+        echo "<txt> ☀ $v% </txt><txtclick>$self menu</txtclick><tool>Brilho do monitor: clique para escolher, ou Super+Ctrl+menos / Super+Ctrl+igual</tool>" ;;
     *)
         sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

@@ -1,103 +1,102 @@
+// fastfetch: layout minimalista para o setup CachyOS · XFCE + i3 (X11).
+// As cores usam a paleta ANSI do terminal, que o iris-wall gera a partir do
+// wallpaper (blue = accent, cyan = secundária, white = dim, default = fg).
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
-    "type": "builtin"
+    "type": "builtin",
+    "source": "CachyOS_small",
+    "color": {
+      "1": "blue",
+      "2": "cyan"
+    },
+    "padding": {
+      "top": 1,
+      "left": 2,
+      "right": 3
+    }
   },
   "display": {
-    "color": {
-      "keys": "38;2;226;52;42",
-      "separator": "#8f8770",
-      "title": "#f3ede1"
-    },
+    "separator": "  ",
     "key": {
-      "width": 9
+      "width": 8
+    },
+    "color": {
+      "keys": "blue",
+      "title": "default",
+      "separator": "white"
     },
     "percent": {
+      "type": 9,
       "color": {
-        "green": "#7fbf6a",
-        "red": "#e2342a",
-        "yellow": "#d9a441"
-      },
-      "type": 9
-    },
-    "separator": "  "
+        "green": "green",
+        "yellow": "yellow",
+        "red": "red"
+      }
+    }
   },
   "modules": [
-    "break",
     {
       "type": "title",
-      "format": "{#1;title}{user-name}{#}{#separator} @ {#}{#1;title}{host-name}{#}"
+      "format": "{#1;title}{user-name}{#}{#separator}@{#}{#1;title}{host-name}{#}"
     },
     {
-      "format": "\u001b[38;2;226;52;42m■\u001b[0m \u001b[38;2;143;135;112m{#keys}■{#} {#separator}CachyOS · XFCE + i3{#}\u001b[0m",
-      "type": "custom"
-    },
-    "break",
-    {
-      "format": "\u001b[38;2;226;52;42m──\u001b[0m \u001b[1;38;2;243;237;225m{#keys}──{#} {#1;title}VITALS{#} {#38;2;58;46;36}──────────────────────────{#}\u001b[0m \u001b[38;2;58;46;36m────\u001b[0m",
-      "type": "custom"
+      "type": "separator",
+      "string": "─"
     },
     {
-      "key": "CPU",
-      "type": "cpu"
+      "type": "os",
+      "key": "os"
     },
     {
+      "type": "kernel",
+      "key": "kernel",
+      "format": "{release}"
+    },
+    {
+      "type": "wm",
+      "key": "wm",
+      "format": "{pretty-name} ({protocol-name})"
+    },
+    {
+      "type": "shell",
+      "key": "shell",
+      "format": "{pretty-name} {version}"
+    },
+    {
+      "type": "terminal",
+      "key": "term",
+      "format": "{pretty-name}"
+    },
+    {
+      "type": "packages",
+      "key": "pkgs"
+    },
+    {
+      "type": "cpu",
+      "key": "cpu",
+      "format": "{name} ({cores-logical})"
+    },
+    {
+      "type": "gpu",
+      "key": "gpu",
       "detectionMethod": "pci",
-      "key": "GPU",
-      "type": "gpu"
+      "format": "{name}"
     },
     {
-      "key": "MEMORY",
-      "type": "memory"
+      "type": "memory",
+      "key": "mem",
+      "format": "{used} / {total} ({percentage})"
     },
     {
-      "key": "DISK",
-      "type": "disk"
-    },
-    "break",
-    {
-      "format": "\u001b[38;2;226;52;42m──\u001b[0m \u001b[1;38;2;243;237;225m{#keys}──{#} {#1;title}SYSTEM{#} {#38;2;58;46;36}──────────────────────────{#}\u001b[0m \u001b[38;2;58;46;36m────\u001b[0m",
-      "type": "custom"
-    },
-    {
-      "key": "OS",
-      "type": "os"
-    },
-    {
-      "key": "KERNEL",
-      "type": "kernel"
-    },
-    {
-      "key": "WM",
-      "type": "wm"
-    },
-    {
-      "key": "SHELL",
-      "type": "shell"
-    },
-    {
-      "key": "PKGS",
-      "type": "packages"
-    },
-    "break",
-    {
-      "format": "\u001b[38;2;226;52;42m──\u001b[0m \u001b[1;38;2;243;237;225m{#keys}──{#} {#1;title}SESSION{#} {#38;2;58;46;36}─────────────────────────{#}\u001b[0m \u001b[38;2;58;46;36m────\u001b[0m",
-      "type": "custom"
-    },
-    {
-      "key": "UPTIME",
-      "type": "uptime"
-    },
-    {
-      "key": "TERM",
-      "type": "terminal"
+      "type": "uptime",
+      "key": "up",
+      "format": "{?days}{days}d {?}{?hours}{hours}h {?}{minutes}m"
     },
     "break",
     {
       "type": "colors",
-      "symbol": "circle",
-      "paddingLeft": 2
-    },
-    "break"
+      "symbol": "circle"
+    }
   ]
 }

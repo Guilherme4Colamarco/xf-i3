@@ -22,7 +22,8 @@ configurações pelas janelas do XFCE, rode `bash ~/rice/salvar-xfce.sh`.
 | `config/i3/config` | i3: atalhos vim, regras de flutuação, workspaces dinâmicos, overview |
 | `config/picom/picom.conf` | compositor: animações, blur, sombras e cantos só nas flutuantes, apps GTK "de vidro" (opacidade 0.92 + blur) |
 | `config/iris/templates/` | cores geradas a partir do wallpaper: GTK 3/4, painel, notificações, i3, rofi, fish, btop, overview |
-| `config/rofi/`, `config/kitty/`, `config/fish/`, `config/btop/`, `config/fastfetch/` | apps do dia a dia |
+| `config/rofi/`, `config/kitty/`, `config/fish/`, `config/starship.toml`, `config/btop/`, `config/fastfetch/`, `config/nvim/`, `config/yazi/`, `config/cava/`, `config/qt6ct/` | apps do dia a dia |
+| `config/environment.d/`, `config/wireplumber/`, `config/nix/` | variáveis de sessão/locale, codecs Bluetooth (WirePlumber) e `nix.conf` |
 | `config/gtk-3.0/gtk.css` | vazio de propósito (qualquer cor aqui travaria o tema do iris) |
 | `config/autostart/` | o que o XFCE sobe no login: picom, wallpaper, overview, workspaces dinâmicos, nomes no pager |
 | `bin/iris-wall` | troca o wallpaper e repinta tudo ao vivo |
@@ -34,6 +35,7 @@ configurações pelas janelas do XFCE, rode `bash ~/rice/salvar-xfce.sh`.
 | `xfce/` | cópia das configs do XFCE: painel, DPI/tema, monitor, sessão com i3, atalhos, notificações, Thunar, apps padrão |
 | `pacotes.txt`, `pacotes-aur.txt` | o que o rice precisa instalado |
 | `instalar.sh`, `salvar-xfce.sh` | colocar o rice no lugar / atualizar a cópia do XFCE |
+| `flake.nix`, `nix/` | porte NixOS (flake com módulos NixOS + Home Manager, pacotes e exemplo) |
 
 ## Atalhos (Super = tecla Windows)
 
@@ -67,6 +69,7 @@ configurações pelas janelas do XFCE, rode `bash ~/rice/salvar-xfce.sh`.
 | `Alt+Tab` | lista de janelas |
 | `Ctrl+Esc` / `Alt+F1` | menu de aplicativos |
 | `Super+Shift+b` | escolher wallpaper (o tema muda junto) |
+| `Super+Shift+v` | histórico da área de transferência (Clipman) |
 | `Super+p` | monitores |
 | `Super+Ctrl+-` / `Super+Ctrl+=` | brilho do monitor −10% / +10% (com Shift: passo de 2%); clique no ☀ do painel escolhe um nível |
 | `Super+Escape` | bloquear |
@@ -92,6 +95,12 @@ bash ~/rice/instalar.sh --pacotes --xfce
 
 Depois disso, faça logout/login (escolha a sessão "Xfce Session" no LightDM) e rode
 `iris-wall --pick` para escolher um wallpaper.
+
+## NixOS
+
+Há também um porte completo para **NixOS** via Flake + Home Manager (`nixosModules.default` e `homeManagerModules.default`), empacotando `iris-colors` e `skippy-xd` e mantendo os dotfiles deste repositório como fonte única.
+
+Veja as instruções, opções dos módulos e um exemplo pronto em [`nix/README.md`](nix/README.md) e [`nix/example/flake.nix`](nix/example/flake.nix).
 
 ## Backups
 

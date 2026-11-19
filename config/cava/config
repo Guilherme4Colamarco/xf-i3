@@ -1,0 +1,19 @@
+[color]
+background = 'default'
+foreground = '#edc06c'
+
+; gradient = 0
+gradient = 1
+gradient_color_1 = '#edc06c'
+gradient_color_2 = '#ffdea8'
+gradient_color_3 = '#ffdea8'
+
+horizontal_gradient = 0
+; horizontal_gradient = 1
+horizontal_gradient_color_1 = '#edc06c'
+horizontal_gradient_color_2 = '#ffdea8'
+horizontal_gradient_color_3 = '#ffdea8'
+horizontal_gradient_color_4 = '#ffdea8'
+horizontal_gradient_color_5 = '#edc06c'
+
+
