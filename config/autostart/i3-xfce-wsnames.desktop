@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Nomes de workspace do i3 no painel
+Comment=Sincroniza os nomes dos workspaces do i3 com o pager do XFCE
+Exec=/home/geko/.local/bin/i3-xfce-wsnames
+Icon=preferences-desktop-workspaces
+OnlyShowIn=XFCE;
+Terminal=false

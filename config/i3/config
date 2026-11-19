@@ -1,0 +1,212 @@
+# i3 dentro da sessão XFCE.
+#
+# O i3 cuida das janelas: tiling, atalhos estilo vim e regras de flutuação.
+# O XFCE cuida do resto: painel (barra única, sem i3bar), bandeja,
+# notificações (xfce4-notifyd), volume (plugin pulseaudio), energia,
+# bloqueio (xfce4-screensaver / xflock4), autostart (~/.config/autostart),
+# configurações e Thunar.
+# Cores: ~/.cache/iris/i3-colors.conf, refeito pelo `iris-wall` a cada wallpaper.
+# Faz parte do rice: o arquivo de verdade fica em ~/rice (veja ~/rice/LEIA-ME.md).
+# Backup da config anterior: ~/Documentos/Backups/2026-11-18 xfce antes do i3/i3/config
+
+set $mod Mod4
+set $bin ~/.local/bin
+# terminal e gerenciador de arquivos vêm de "Aplicativos preferidos" do XFCE
+set $term exo-open --launch TerminalEmulator
+set $files exo-open --launch FileManager
+
+# ── aparência ────────────────────────────────────────────────────────────────
+# a fonte escala sozinha com o Xft.dpi (125 = 1.3x) que o xfsettingsd publica
+font pango:Sans 10
+include ~/.cache/iris/i3-colors.conf
+
+default_border pixel 2
+default_floating_border normal
+hide_edge_borders smart
+gaps inner 6
+smart_gaps on
+
+# ── comportamento ────────────────────────────────────────────────────────────
+focus_follows_mouse no
+mouse_warping output
+# clique na tasklist/pager do painel foca a janela e troca de workspace
+focus_on_window_activation focus
+# Super + arrastar move; Super + botão direito redimensiona (inclusive tiled)
+floating_modifier $mod
+tiling_drag modifier titlebar
+floating_minimum_size 220 x 120
+
+# ── foco / mover / redimensionar (vim) ───────────────────────────────────────
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+bindsym $mod+Ctrl+h resize shrink width 40 px or 5 ppt
+bindsym $mod+Ctrl+j resize grow height 40 px or 5 ppt
+bindsym $mod+Ctrl+k resize shrink height 40 px or 5 ppt
+bindsym $mod+Ctrl+l resize grow width 40 px or 5 ppt
+
+# setas continuam funcionando
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+mode "resize" {
+        bindsym h resize shrink width 20 px or 2 ppt
+        bindsym j resize grow height 20 px or 2 ppt
+        bindsym k resize shrink height 20 px or 2 ppt
+        bindsym l resize grow width 20 px or 2 ppt
+        bindsym Shift+h resize shrink width 80 px or 10 ppt
+        bindsym Shift+j resize grow height 80 px or 10 ppt
+        bindsym Shift+k resize shrink height 80 px or 10 ppt
+        bindsym Shift+l resize grow width 80 px or 10 ppt
+        bindsym Left resize shrink width 20 px or 2 ppt
+        bindsym Down resize grow height 20 px or 2 ppt
+        bindsym Up resize shrink height 20 px or 2 ppt
+        bindsym Right resize grow width 20 px or 2 ppt
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym $mod+r mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# ── splits e layouts (<C-w>v / <C-w>s) ───────────────────────────────────────
+
+bindsym $mod+v split h
+bindsym $mod+s split v
+bindsym $mod+z layout toggle split
+bindsym $mod+t layout tabbed
+bindsym $mod+g layout stacking
+
+bindsym $mod+f fullscreen toggle
+bindsym $mod+x floating toggle
+bindsym $mod+space focus mode_toggle
+bindsym $mod+a focus parent
+bindsym $mod+Shift+a focus child
+
+# fechar (:q)
+bindsym $mod+q kill
+bindsym $mod+Shift+q kill
+
+# "minimizar": o i3 não minimiza, o scratchpad faz esse papel
+bindsym $mod+Shift+w move scratchpad
+bindsym $mod+w scratchpad show
+
+# modo desktop: o workspace atual alterna entre tiling e tudo flutuando
+bindsym $mod+Shift+t exec --no-startup-id $bin/i3-desktop-mode
+
+# ── workspaces ───────────────────────────────────────────────────────────────
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+# o 10 é o workspace "livre": tudo nele flutua, como num desktop tradicional
+set $ws10 "10:livre"
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+bindsym $mod+0 workspace number $ws10
+
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9
+bindsym $mod+Shift+0 move container to workspace number $ws10
+
+# workspaces dinâmicos (GNOME/niri): 1..9 sempre em sequência, renumerados
+# pelo i3-dynamic-ws; Super+. no último cria um vazio novo
+bindsym $mod+comma exec --no-startup-id $bin/i3-ws prev
+bindsym $mod+period exec --no-startup-id $bin/i3-ws next
+bindsym $mod+Shift+comma exec --no-startup-id $bin/i3-ws move-prev
+bindsym $mod+Shift+period exec --no-startup-id $bin/i3-ws move-next
+bindsym $mod+n exec --no-startup-id $bin/i3-ws new
+bindsym $mod+Shift+n exec --no-startup-id $bin/i3-ws move-new
+# overview (skippy-xd): todos os workspaces / só as janelas do atual
+bindsym $mod+Tab exec --no-startup-id skippy-xd --paging
+bindsym $mod+Shift+Tab exec --no-startup-id skippy-xd --expose
+
+# ── programas ────────────────────────────────────────────────────────────────
+bindsym $mod+Return exec --no-startup-id $term
+bindsym $mod+e exec --no-startup-id $files
+# Localizador de aplicativos do XFCE (flutua pela regra Xfce4-appfinder);
+# o menu de aplicativos fica no painel, Ctrl+Esc e Alt+F1
+bindsym $mod+d exec --no-startup-id xfce4-appfinder
+# busca rápida de apps pelo rofi
+bindsym $mod+Shift+d exec --no-startup-id rofi -show drun
+bindsym Mod1+Tab exec --no-startup-id rofi -show window
+bindsym $mod+Shift+b exec --no-startup-id $bin/iris-wall --pick
+bindsym $mod+p exec --no-startup-id xfce4-display-settings --minimal
+# brilho real do monitor (DDC/CI), com OSD; Shift = passo fino
+bindsym $mod+Ctrl+minus exec --no-startup-id $bin/brilho down
+bindsym $mod+Ctrl+equal exec --no-startup-id $bin/brilho up
+bindsym $mod+Ctrl+Shift+minus exec --no-startup-id $bin/brilho down 2
+bindsym $mod+Ctrl+Shift+equal exec --no-startup-id $bin/brilho up 2
+bindsym XF86MonBrightnessDown exec --no-startup-id $bin/brilho down
+bindsym XF86MonBrightnessUp exec --no-startup-id $bin/brilho up
+
+# ── sessão (pelo XFCE) ───────────────────────────────────────────────────────
+bindsym $mod+Escape exec --no-startup-id xflock4
+bindsym $mod+Shift+e exec --no-startup-id xfce4-session-logout
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+
+# ── regras: o que flutua (o lado "desktop tradicional") ──────────────────────
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="bubble"] floating enable
+for_window [window_role="task_dialog"] floating enable
+for_window [window_role="Preferences"] floating enable
+for_window [window_type="dialog"] floating enable
+for_window [window_type="utility"] floating enable
+for_window [window_type="splash"] floating enable
+for_window [window_type="toolbar"] floating enable
+
+# configurações e utilitários do XFCE e companhia
+for_window [class="(?i)^(xfce4-settings-manager|xfce4-.*-settings|xfce4-display-settings|xfce4-settings-editor|xfce4-appfinder|xfce4-taskmanager|xfce4-about|xfce4-session-logout|xfce4-screensaver-preferences|xfce4-power-manager-settings|xfce4-mime-settings|xfce4-dict|pavucontrol|nm-connection-editor|blueman-manager|file-roller|engrampa|lightdm-gtk-greeter-settings|qt6ct|gnome-calculator|galculator)$"] floating enable
+# diálogos do painel (preferências, propriedades de lançador) e popups de plugins
+for_window [class="(?i)^xfce4-panel$" window_type="normal"] floating enable
+for_window [class="(?i)^wrapper-2\.0$"] floating enable, border none
+# janelas de operação/propriedades do Thunar
+for_window [class="(?i)^thunar$" title="(?i)(progress|transfer|copiando|movendo|apagando|operaç|propriedades|properties|confirm)"] floating enable
+# notificações: sem borda, visíveis em qualquer workspace
+for_window [class="(?i)^xfce4-notifyd$"] floating enable, border none, sticky enable
+
+# workspace 10: tudo flutua com barra de título
+for_window [workspace="^10"] floating enable, border normal
+
+# mod+alt+<movimento de foco>: troca de workspace (esq/cima = anterior, dir/baixo = próximo; usa i3-ws, então "next" no último cria um vazio)
+bindsym $mod+Mod1+h exec --no-startup-id $bin/i3-ws prev
+bindsym $mod+Mod1+k exec --no-startup-id $bin/i3-ws prev
+bindsym $mod+Mod1+j exec --no-startup-id $bin/i3-ws next
+bindsym $mod+Mod1+l exec --no-startup-id $bin/i3-ws next
+bindsym $mod+Mod1+Left exec --no-startup-id $bin/i3-ws prev
+bindsym $mod+Mod1+Up exec --no-startup-id $bin/i3-ws prev
+bindsym $mod+Mod1+Down exec --no-startup-id $bin/i3-ws next
+bindsym $mod+Mod1+Right exec --no-startup-id $bin/i3-ws next

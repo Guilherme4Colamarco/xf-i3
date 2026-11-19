@@ -1,0 +1,29 @@
+/* iris -> xfce4-notifyd. O iris-wall copia para o slot do tema
+   (~/.local/share/themes/Iris-?/xfce-notify-4.0/gtk.css). */
+#XfceNotifyWindow {
+  background-color: alpha({bg}, 0.82);
+  color: {fg};
+  border: 2px solid {accent};
+  border-radius: 8px;
+}
+#XfceNotifyWindow label#summary {
+  font-weight: bold;
+  color: {fg};
+}
+#XfceNotifyWindow label#body {
+  color: {fg};
+}
+#XfceNotifyWindow progressbar progress {
+  background-color: {accent};
+}
+#XfceNotifyWindow progressbar trough {
+  background-color: {surface};
+}
+#XfceNotifyWindow button {
+  background-color: {surface};
+  color: {fg};
+}
+#XfceNotifyWindow button:hover {
+  background-color: {accent};
+  color: {bg};
+}

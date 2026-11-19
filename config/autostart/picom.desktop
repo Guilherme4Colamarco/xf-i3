@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Compositor (picom)
+Comment=Sombras, fades e vsync para o i3
+Exec=picom --config /home/geko/.config/picom/picom.conf
+Icon=preferences-desktop-effects
+OnlyShowIn=XFCE;
+Terminal=false

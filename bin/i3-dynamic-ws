@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# i3-dynamic-ws: workspaces dinâmicos estilo GNOME/niri.
+#
+# Mantém os workspaces numerados 1..9 em sequência, sem buracos: quando um
+# esvazia e some, os seguintes descem um número; um workspace criado fora de
+# ordem (Super+7 com só 3 existentes) vira o próximo da fila. Nomes que não
+# são só um número (ex.: "10:livre") ficam de fora e não mudam.
+# Os atalhos ficam em ~/.local/bin/i3-ws. Iniciado pelo XFCE:
+# ~/.config/autostart/i3-dynamic-ws.desktop
+set -uo pipefail
+
+normalize() {
+    local i=1 n
+    while IFS= read -r n; do
+        [[ "$n" != "$i" ]] && i3-msg -q "rename workspace \"$n\" to \"$i\""
+        ((i++))
+    done < <(i3-msg -t get_workspaces | jq -r '
+        [.[] | select(.name | test("^[0-9]+$")) | select(.num >= 1 and .num <= 9)]
+        | sort_by(.num) | .[].name')
+}
+
+fails=0
+while :; do
+    if pgrep -x -u "$UID" i3 >/dev/null; then
+        fails=0
+        normalize
+        i3-msg -t subscribe -m '["workspace"]' 2>/dev/null |
+            while read -r ev; do
+                case "$ev" in
+                    *'"change":"empty"'*|*'"change":"init"'*|*'"change":"move"'*) normalize ;;
+                esac
+            done
+    fi
+    ((++fails > 60)) && exit 0
+    sleep 1
+done

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Wallpaper + cores (iris)
+Comment=Reaplica o último wallpaper e o tema gerado pelo iris
+Exec=/home/geko/.local/bin/iris-wall --restore
+Icon=preferences-desktop-wallpaper
+OnlyShowIn=XFCE;
+Terminal=false

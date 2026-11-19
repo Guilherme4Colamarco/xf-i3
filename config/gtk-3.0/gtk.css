@@ -1,0 +1,4 @@
+/* Vazio de propósito. As cores do GTK 3 vêm do tema Iris-A/Iris-B que o
+   iris-wall monta a partir do wallpaper (~/.config/iris/templates/gtk3-colors.css).
+   Qualquer @define-color aqui teria prioridade sobre o tema e travaria as cores.
+   O CSS antigo do Ryoku/matugen está em ~/Documentos/Backups/2026-11-18 xfce antes do i3/gtk-3.0/gtk.css */

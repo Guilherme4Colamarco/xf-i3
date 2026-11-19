@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Workspaces dinâmicos (i3)
+Comment=Mantém os workspaces do i3 numerados em sequência, sem buracos
+Exec=/home/geko/.local/bin/i3-dynamic-ws
+Icon=preferences-desktop-workspaces
+OnlyShowIn=XFCE;
+Terminal=false

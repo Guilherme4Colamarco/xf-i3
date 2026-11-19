@@ -1,0 +1,110 @@
+# skippy-xd: overview (Super+Tab = todos os workspaces, Super+Shift+Tab = expose).
+# Renderizado pelo iris e copiado pelo iris-wall para
+# ~/.config/skippy-xd/skippy-xd.rc; edite ~/.config/iris/templates/skippy-xd.rc.
+# O daemon (~/.config/autostart/skippy-xd.desktop) guarda miniaturas das
+# janelas enquanto aparecem, e por isso os workspaces escondidos pelo i3
+# também têm prévia. As seções [appearance] em diante recarregam ao vivo.
+
+[system]
+daemonPath = /tmp/skippy-xd-fifo
+clientPath = /tmp/skippy-xd-fofi
+clientList = _NET_CLIENT_LIST
+# o picom já compõe a tela
+pseudoTrans = false
+
+[multimonitor]
+currentMonitor = window
+switchOnCurrentMonitor = true
+exposeOnCurrentMonitor = false
+pagingOnCurrentMonitor = true
+
+[layout]
+switchLayout = rect
+exposeLayout = cosmos
+switchWaitDuration = 100
+switchCycleDuringWait = false
+switchCycleDesktops = false
+exposeCycleDesktops = false
+minDistance = 40
+upscaleWindows = false
+
+[appearance]
+animationDuration = 180
+animationRefresh = 165
+# fundo opaco: com blur atrás, as miniaturas do kitty (translúcido) viravam borrão
+background = {bg}FF
+preservePages = true
+includeFrame = true
+leftFrameBorder = 0
+topFrameBorder = 0
+cornerRadius = 8
+
+[filler]
+opacity = 200
+color = {surface}
+iconPlace = mid mid
+iconSize = 64
+
+[livepreview]
+opacity = 255
+icon = true
+iconPlace = top left
+iconSize = 40
+
+[highlight]
+tint = {accent}
+tintOpacity = 70
+tintWindow = true
+tintBorder = 4
+
+[multiselect]
+tint = {syntax_func}
+tintOpacity = 150
+
+[panel]
+show = true
+backgroundTinting = true
+reserveSpace = true
+
+[desktop]
+show = true
+backgroundTinting = true
+
+[label]
+show = all
+option = windowClass
+position = bottom
+offsetX = 0
+offsetY = -8
+width = 0.8
+cornerRadius = 6
+padding = 6
+border = {surface}
+background = {surface}
+backgroundHighlight = {accent}
+opacity = 225
+text = {fg}
+textOutline = {bg}
+font = Sans-11:weight=bold
+
+[bindings]
+enforceFocus = true
+pivotLockingTime = 0
+moveMouse = false
+# vim + setas; Tab/Shift+Tab também andam
+keysUp = Up k
+keysDown = Down j
+keysLeft = Left h
+keysRight = Right l
+keysSelect = Return space
+keysCancel = Escape q
+keysNext = Tab n
+keysPrev = ISO_Left_Tab p
+keysIconify = Next
+keysShade = Prior
+keysClose = Delete x
+miwMouse1 = focus
+miwMouse2 = close-ewmh
+miwMouse3 = iconify
+miwMouse4 = keysNext
+miwMouse5 = keysPrev

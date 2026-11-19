@@ -1,0 +1,59 @@
+/* rofi: cores vêm do iris (~/.cache/iris/colors.rasi), refeitas a cada wallpaper. */
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus";
+    drun-display-format: "{name}";
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Janelas";
+    window-format: "{w}  {c}  {t}";
+    kb-row-up: "Up,Control+k";
+    kb-row-down: "Down,Control+j";
+    kb-remove-to-eol: "";
+    kb-accept-entry: "Return,KP_Enter";
+    kb-mode-complete: "";
+    kb-remove-char-back: "BackSpace,Shift+BackSpace";
+}
+
+@import "~/.cache/iris/colors.rasi"
+
+* {
+    font: "Sans 11";
+    background-color: transparent;
+    text-color: @fg;
+}
+
+window {
+    width: 38%;
+    background-color: @bg-glass;
+    border: 2px;
+    border-color: @accent;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+mainbox { spacing: 10px; children: [ inputbar, listview ]; }
+
+inputbar {
+    background-color: @surface-glass;
+    border-radius: 8px;
+    padding: 8px 12px;
+    spacing: 8px;
+    children: [ prompt, entry ];
+}
+prompt { text-color: @accent; }
+entry { placeholder: "buscar…"; placeholder-color: @dim; }
+
+listview { lines: 9; columns: 1; fixed-height: false; spacing: 4px; scrollbar: false; }
+
+element { padding: 7px 10px; border-radius: 6px; spacing: 10px; }
+element-icon { size: 1.4em; }
+element-text { vertical-align: 0.5; }
+element normal.normal, element alternate.normal { background-color: transparent; text-color: @fg; }
+element selected.normal { background-color: @accent; text-color: @on-accent; }
+element normal.urgent, element alternate.urgent { text-color: @urgent; }
+element selected.urgent { background-color: @urgent; text-color: @on-accent; }
+element normal.active, element alternate.active { text-color: @accent; }
+element selected.active { background-color: @accent; text-color: @on-accent; }
+element-text, element-icon { text-color: inherit; }

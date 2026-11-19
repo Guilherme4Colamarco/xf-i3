@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# i3-desktop-mode: alterna o workspace atual entre tiling e "modo desktop"
+# (todas as janelas flutuando com barra de título, como num desktop comum).
+# Se houver qualquer janela tiled no workspace, todas passam a flutuar;
+# se todas já flutuam, todas voltam para o tiling.
+set -euo pipefail
+ws=$(i3-msg -t get_workspaces | jq -r '.[] | select(.focused).name')
+tiled=$(i3-msg -t get_tree | jq --arg ws "$ws" '
+  [.. | objects | select(.type == "workspace" and .name == $ws)
+   | .nodes | .. | objects | select(.window? != null)] | length')
+if (( tiled > 0 )); then
+    i3-msg -q '[workspace=__focused__ tiling] floating enable, border normal'
+    msg="modo desktop: janelas flutuando"
+else
+    i3-msg -q '[workspace=__focused__ floating] floating disable, border pixel 2'
+    msg="modo tiling"
+fi
+command -v notify-send >/dev/null && notify-send -a i3 -t 1500 "Workspace $ws" "$msg" || true

@@ -1,0 +1,12 @@
+/* iris -> rofi. Importado por ~/.config/rofi/config.rasi. */
+* {
+    bg:      {bg};
+    surface: {surface};
+    fg:      {fg};
+    dim:     {dim};
+    accent:  {accent};
+    on-accent: {bg};
+    bg-glass: {bg}D1;
+    surface-glass: {surface}B3;
+    urgent:  {red};
+}

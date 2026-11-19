@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# iris-wall: define o wallpaper e repinta a sessão XFCE + i3 a partir dele.
+#
+#   iris-wall IMAGEM        aplica o wallpaper e o tema gerado pelo iris
+#   iris-wall --pick        escolhe um wallpaper no rofi (com miniaturas)
+#   iris-wall --restore     reaplica o último wallpaper (usado no login)
+#   -d/--dark, -l/--light   força tema escuro/claro (padrão: o iris decide)
+#
+# O que é repintado: tema GTK 3 (ao vivo, via slots Iris-A/Iris-B), GTK 4 /
+# libadwaita (ao reabrir o app), painel XFCE, xfce4-notifyd, bordas do i3,
+# rofi e kitty. Templates em ~/.config/iris/templates/.
+set -euo pipefail
+
+CACHE="$HOME/.cache/iris"
+THEMES="$HOME/.local/share/themes"
+STATE="$CACHE/wallpaper"
+WALL_DIRS=("$HOME/Imagens/Wallpapers" ${IRIS_WALL_DIRS:-})
+
+die() { echo "iris-wall: $*" >&2; command -v notify-send >/dev/null && notify-send -a iris-wall "iris-wall" "$*"; exit 1; }
+
+mode_flag=()
+img=""
+action="apply"
+while (($#)); do
+    case "$1" in
+        -d|--dark)  mode_flag=(--dark 1) ;;
+        -l|--light) mode_flag=(--dark 0) ;;
+        --pick)     action="pick" ;;
+        --restore)  action="restore" ;;
+        -h|--help)  sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *)          img="$1" ;;
+    esac
+    shift
+done
+
+pick() {
+    local f list=()
+    for d in "${WALL_DIRS[@]}"; do
+        [[ -d "$d" ]] || continue
+        while IFS= read -r -d '' f; do list+=("$f"); done < <(
+            find "$d" -maxdepth 2 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0 | sort -z)
+    done
+    ((${#list[@]})) || die "nenhuma imagem em ${WALL_DIRS[*]}"
+    local choice
+    choice=$(for f in "${list[@]}"; do printf '%s\0icon\x1f%s\n' "$(basename "$f")" "$f"; done |
+        rofi -dmenu -i -p "Wallpaper" -show-icons -format i \
+             -theme-str 'element-icon { size: 4em; } listview { lines: 6; } window { width: 46%; }') || exit 0
+    [[ -n "$choice" ]] && img="${list[$choice]}"
+}
+
+case "$action" in
+    pick)    pick ;;
+    restore) [[ -f "$STATE" ]] && img="$(<"$STATE")" || exit 0 ;;
+esac
+
+[[ -n "$img" ]] || { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+[[ -f "$img" ]] || die "arquivo não encontrado: $img"
+img="$(realpath "$img")"
+
+mkdir -p "$CACHE"
+exec 9>"$CACHE/.lock"
+flock -n 9 || die "já tem um iris-wall rodando"
+
+# 1. wallpaper (o xfdesktop não roda sob o i3; o feh pinta a janela raiz)
+if command -v feh >/dev/null; then
+    feh --no-fehbg --bg-fill "$img"
+else
+    echo "iris-wall: feh não instalado, só as cores serão aplicadas" >&2
+fi
+printf '%s\n' "$img" > "$STATE"
+
+# 2. paleta + templates
+iris "${mode_flag[@]}" "$img" >/dev/null
+dark=$(jq -r '.dark' "$CACHE/colors.json")
+if [[ "$dark" == "true" ]]; then base=adw-gtk3-dark; scheme=prefer-dark; else base=adw-gtk3; scheme=prefer-light; fi
+
+# 3. GTK 3 ao vivo: o GTK 3 só relê CSS quando o NOME do tema muda, então o
+#    tema novo vai para o slot que não está em uso e a sessão troca para ele.
+cur=$(xfconf-query -c xsettings -p /Net/ThemeName 2>/dev/null || true)
+[[ "$cur" == "Iris-A" ]] && slot="Iris-B" || slot="Iris-A"
+sdir="$THEMES/$slot"
+mkdir -p "$sdir/gtk-3.0" "$sdir/xfce-notify-4.0"
+cp "$CACHE/gtk3-colors.css" "$sdir/gtk-3.0/colors.css"
+for css in gtk.css gtk-dark.css; do
+    printf '@import url("file:///usr/share/themes/%s/gtk-3.0/gtk.css");\n@import url("colors.css");\n' "$base" > "$sdir/gtk-3.0/$css"
+done
+ln -sfn "/usr/share/themes/$base/gtk-3.0/assets" "$sdir/gtk-3.0/assets"
+cp "$CACHE/notify.css" "$sdir/xfce-notify-4.0/gtk.css"
+cat > "$sdir/index.theme" <<EOF
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=$slot
+Comment=Tema gerado pelo iris a partir de $(basename "$img")
+EOF
+
+xfconf-query -c xsettings -p /Net/ThemeName -s "$slot"
+xfconf-query -c xfce4-notifyd -p /theme -n -t string -s "$slot"
+xfconf-query -c xfce4-panel -p /panels/dark-mode -n -t bool -s "$dark"
+
+# 4. GTK 4 / libadwaita + apps que leem gsettings ou o portal
+cp "$CACHE/gtk4.css" "$HOME/.config/gtk-4.0/gtk.css"
+gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
+gsettings set org.gnome.desktop.interface gtk-theme "$slot" 2>/dev/null || true
+
+# settings.ini: base para apps que não falam xsettings
+icons=$(xfconf-query -c xsettings -p /Net/IconThemeName 2>/dev/null || echo Papirus)
+cursor=$(xfconf-query -c xsettings -p /Gtk/CursorThemeName 2>/dev/null || echo Adwaita)
+csize=$(xfconf-query -c xsettings -p /Gtk/CursorThemeSize 2>/dev/null || echo 24)
+font=$(xfconf-query -c xsettings -p /Gtk/FontName 2>/dev/null || echo "Sans 10")
+for v in 3.0 4.0; do
+    {
+        echo "# Gerado pelo iris-wall. Sob o XFCE o xfsettingsd manda; isto é só a base."
+        echo "[Settings]"
+        [[ $v == 3.0 ]] && echo "gtk-theme-name=$slot"
+        echo "gtk-icon-theme-name=$icons"
+        echo "gtk-cursor-theme-name=$cursor"
+        echo "gtk-cursor-theme-size=$csize"
+        echo "gtk-font-name=$font"
+        [[ $v == 3.0 ]] && echo "gtk-application-prefer-dark-theme=$([[ $dark == true ]] && echo 1 || echo 0)"
+    } > "$HOME/.config/gtk-$v/settings.ini"
+done
+
+# 5. i3, kitty, fish, btop (rofi lê as cores a cada abertura)
+pgrep -x i3 >/dev/null && i3-msg -q reload || true
+pkill -USR1 -x kitty 2>/dev/null || true
+# variáveis universais: todo fish aberto troca de cor na hora
+command -v fish >/dev/null && fish -c "source $CACHE/colors.fish" || true
+mkdir -p "$HOME/.config/btop/themes" && cp "$CACHE/btop.theme" "$HOME/.config/btop/themes/iris.theme"
+# overview (skippy-xd): cores ao vivo se o daemon estiver rodando
+mkdir -p "$HOME/.config/skippy-xd" && cp "$CACHE/skippy-xd.rc" "$HOME/.config/skippy-xd/skippy-xd.rc"
+if command -v skippy-xd >/dev/null && pgrep -f 'skippy-xd --start-daemon' >/dev/null; then
+    timeout 3 skippy-xd --config-reload >/dev/null 2>&1 || true
+fi
+
+# o slot antigo fica no disco para a próxima troca
+echo "iris-wall: $(basename "$img") → $slot ($scheme)"

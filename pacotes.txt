@@ -1,0 +1,49 @@
+# Pacotes do rice (repositórios oficiais / CachyOS). Instalar: bash ~/rice/instalar.sh --pacotes
+# sessão e janelas
+i3-wm
+picom
+xfce4-session
+xfce4-settings
+xfconf
+xfce4-panel
+xfce4-pulseaudio-plugin
+xfce4-notifyd
+xfce4-power-manager
+xfce4-screensaver
+xfce4-appfinder
+xfce4-screenshooter
+xfce4-taskmanager
+lightdm
+lightdm-gtk-greeter
+xorg-xrandr
+# apps do dia a dia
+thunar
+thunar-archive-plugin
+thunar-volman
+tumbler
+ristretto
+mousepad
+kitty
+rofi
+mpv
+blueman
+network-manager-applet
+# tema, wallpaper e cores (o iris-colors vem do AUR)
+feh
+jq
+libnotify
+adw-gtk-theme
+papirus-icon-theme
+noto-fonts
+ttf-jetbrains-mono-nerd
+xdg-desktop-portal-gtk
+xdg-terminal-exec
+# terminal
+fish
+starship
+zoxide
+fzf
+eza
+fd
+btop
+fastfetch

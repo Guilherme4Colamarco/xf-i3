@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# brilho: brilho real do monitor (backlight) via DDC/CI, com OSD de notificação.
+#
+#   brilho up [passo]     aumenta (padrão: 10)
+#   brilho down [passo]   diminui
+#   brilho set N          define N% (0-100)
+#   brilho get            mostra o valor atual
+#   brilho menu           escolhe no rofi (presets)
+#   brilho panel          texto para o plugin genmon do painel (clique abre o menu)
+#
+# O DDC é lento (~0,25 s por comando), então o valor fica num cache e um único
+# processo em segundo plano aplica sempre o pedido mais recente: apertar a
+# tecla várias vezes seguidas não enfileira comandos no monitor.
+set -uo pipefail
+DDC=(ddcutil --bus "${BRILHO_BUS:-3}" --noverify)   # AOC AG323FWG3R3 em /dev/i2c-3
+RUN="${XDG_RUNTIME_DIR:-/tmp}/brilho"
+mkdir -p "$RUN"
+CUR="$RUN/atual" TGT="$RUN/alvo" NID="$RUN/notif-id"
+
+read_monitor() { "${DDC[@]}" getvcp 10 --brief 2>/dev/null | awk '/^VCP 10/{print $4}'; }
+
+current() {
+    local v
+    v=$(cat "$CUR" 2>/dev/null)
+    if [[ ! $v =~ ^[0-9]+$ ]]; then
+        v=$(read_monitor)
+        [[ $v =~ ^[0-9]+$ ]] || v=100
+        echo "$v" > "$CUR"
+    fi
+    echo "$v"
+}
+
+osd() {
+    local v=$1 id icon=display-brightness-symbolic args=()
+    id=$(cat "$NID" 2>/dev/null)
+    [[ $id =~ ^[0-9]+$ ]] && args=(-r "$id")
+    id=$(notify-send -a Brilho -i "$icon" -t 1500 -p "${args[@]}" \
+         -h "int:value:$v" -h string:x-canonical-private-synchronous:brilho \
+         "Brilho" "$v%" 2>/dev/null) && echo "$id" > "$NID"
+}
+
+apply() {
+    echo "$1" > "$TGT"; echo "$1" > "$CUR"
+    # um aplicador só; ele segue até o monitor estar no último valor pedido
+    (
+        flock -n 9 || exit 0
+        local last=""
+        while :; do
+            local t; t=$(cat "$TGT")
+            [[ "$t" == "$last" ]] && break
+            "${DDC[@]}" setvcp 10 "$t" >/dev/null 2>&1
+            last=$t
+        done
+    ) 9>"$RUN/lock" &
+}
+
+clamp() { local v=$1; ((v < 0)) && v=0; ((v > 100)) && v=100; echo "$v"; }
+
+case "${1:-}" in
+    up|down)
+        step=${2:-10}; v=$(current)
+        [[ $1 == up ]] && v=$((v + step)) || v=$((v - step))
+        v=$(clamp "$v"); apply "$v"; osd "$v" ;;
+    set)
+        [[ ${2:-} =~ ^[0-9]+$ ]] || { echo "uso: brilho set 0-100" >&2; exit 1; }
+        v=$(clamp "$2"); apply "$v"; osd "$v" ;;
+    get)
+        # lê do monitor de verdade (alguém pode ter usado os botões dele)
+        v=$(read_monitor); [[ $v =~ ^[0-9]+$ ]] && echo "$v" > "$CUR"; echo "${v:-?}" ;;
+    menu)
+        cur=$(current)
+        pick=$(printf '%s\n' 100 90 80 70 60 50 40 30 20 10 0 |
+               sed "s/^$cur\$/$cur  (atual)/; s/^\([0-9]*\)/\1%/" |
+               rofi -dmenu -i -p "Brilho" -theme-str 'window { width: 18%; } listview { lines: 11; }') || exit 0
+        v=${pick%%%*}; [[ $v =~ ^[0-9]+$ ]] && { apply "$v"; osd "$v"; } ;;
+    panel)
+        v=$(current)
+        echo "<txt> ☀ $v% </txt><txtclick>$HOME/.local/bin/brilho menu</txtclick><tool>Brilho do monitor: clique para escolher, ou Super+Ctrl+menos / Super+Ctrl+igual</tool>" ;;
+    *)
+        sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
