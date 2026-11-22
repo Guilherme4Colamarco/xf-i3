@@ -46,6 +46,8 @@ video/mp2t=mpv.desktop
 video/ogg=mpv.desktop
 video/3gpp=mpv.desktop
 video/3gpp2=mpv.desktop
+x-scheme-handler/antigravity=antigravity.desktop
+x-scheme-handler/openmausbot=com.openmausbot.app.desktop
 
 [Added Associations]
 x-scheme-handler/http=xfce4-web-browser.desktop;
@@ -57,4 +59,5 @@ application/x-extension-shtml=zen.desktop;
 application/xhtml+xml=zen.desktop;
 application/x-extension-xhtml=zen.desktop;
 application/x-extension-xht=zen.desktop;
-
+x-scheme-handler/antigravity=antigravity.desktop;
+x-scheme-handler/openmausbot=com.openmausbot.app.desktop;

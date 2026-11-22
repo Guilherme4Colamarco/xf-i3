@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# rice-session: inicia uma sessão XFCE escolhendo o WM (i3 ou xfwm4).
+export RICE_WM="${1:-i3}"
+exec startxfce4

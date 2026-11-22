@@ -21,6 +21,10 @@
     <property name="plugin-6" type="string" value="systray">
       <property name="square-icons" type="bool" value="true"/>
       <property name="known-legacy-items" type="array">
+        <value type="string" value="steam"/>
+        <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (77%)"/>
+        <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (78%)"/>
+        <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (72%)"/>
         <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (73%)"/>
         <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (82%)"/>
         <value type="string" value="miniaplicativo gerenciador de redes"/>
@@ -33,6 +37,7 @@
         <value type="string" value="conexão de rede wi-fi “v.melo_ext” ativa: v.melo_ext (84%)"/>
       </property>
       <property name="known-items" type="array">
+        <value type="string" value="Antigravity_status_icon_1"/>
         <value type="string" value="steam"/>
         <value type="string" value="blueman"/>
         <value type="string" value="chrome_status_icon_1"/>
@@ -76,13 +81,16 @@
     </property>
     <property name="plugin-20" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="known-players" type="string" value="Helium"/>
+      <property name="known-players" type="string" value="ChatGPT;Helium"/>
     </property>
     <property name="plugin-1" type="string" value="applicationsmenu"/>
     <property name="plugin-21" type="string" value="genmon">
       <property name="command" type="string" value="/home/geko/.local/bin/brilho panel"/>
       <property name="use-label" type="bool" value="false"/>
       <property name="update-period" type="int" value="1500"/>
+      <property name="text" type="string" value="(genmon)"/>
+      <property name="enable-single-row" type="bool" value="true"/>
+      <property name="font" type="string" value="Sans 10"/>
     </property>
     <property name="plugin-22" type="string" value="xfce4-clipman-plugin"/>
   </property>

@@ -1,8 +1,8 @@
-# Pacotes do AUR (instalados com yay pelo instalar.sh --pacotes)
-# gerador de paleta a partir do wallpaper (iris-wall)
+# AUR packages (installed with yay via instalar.sh --packages)
+# palette generator from wallpaper (iris-wall)
 iris-colors
-# overview do Super+Tab
+# Super+Tab overview
 skippy-xd-git
-# Cursor Bibata-Modern-Ice: hoje vem do ryoku-cursors (repositório [ryoku]).
-# Numa máquina sem esse repositório, use o do AUR:
+# Bibata-Modern-Ice cursor: currently comes from ryoku-cursors ([ryoku] repo).
+# On a machine without that repo, use the AUR package:
 # bibata-cursor-theme-bin

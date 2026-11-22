@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# i3-xfce-wsnames: mantém os nomes de workspace do XFCE iguais aos do i3.
+# i3-xfce-wsnames: keeps XFCE workspace names in sync with i3.
 #
-# O xfsettingsd (workspaces.c) publica _NET_DESKTOP_NAMES a partir de
-# xfconf xfwm4:/general/workspace_names e sobrescreve o que o i3 escreve,
-# então o pager do painel mostraria "Espaço de trabalho N". Este serviço
-# escuta os eventos de workspace do i3 e copia a lista de nomes, na ordem,
-# para esse xfconf; o xfsettingsd então publica os nomes certos.
-# Iniciado pelo XFCE: ~/.config/autostart/i3-xfce-wsnames.desktop
+# xfsettingsd (workspaces.c) publishes _NET_DESKTOP_NAMES from xfconf
+# xfwm4:/general/workspace_names and overwrites what i3 writes, so the
+# panel pager would otherwise show "Workspace N". This service listens
+# to i3 workspace events and copies the ordered list of names into that
+# xfconf property; xfsettingsd then publishes the right names.
+# Started by XFCE: ~/.config/autostart/i3-xfce-wsnames.desktop
 set -uo pipefail
+
+# Only runs when the session is using i3
+[[ "${RICE_WM:-}" == "xfwm4" ]] && exit 0
+pgrep -x -u "$UID" xfwm4 >/dev/null && exit 0
 
 sync_names() {
     local args=() n
@@ -21,10 +25,10 @@ while :; do
     if pgrep -x -u "$UID" i3 >/dev/null; then
         fails=0
         sync_names
-        # uma linha JSON por evento (focus, init, empty, rename, move...)
+        # one JSON line per event (focus, init, empty, rename, move...)
         i3-msg -t subscribe -m '["workspace"]' 2>/dev/null | while read -r _; do sync_names; done
     fi
-    # i3 reiniciou ou ainda não subiu; desiste se a sessão X acabou
+    # i3 restarted or hasn't started yet; give up if the X session ended
     ((++fails > 60)) && exit 0
     sleep 1
 done

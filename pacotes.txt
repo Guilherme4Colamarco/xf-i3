@@ -1,6 +1,9 @@
-# Pacotes do rice (repositórios oficiais / CachyOS). Instalar: bash ~/rice/instalar.sh --pacotes
-# sessão e janelas
+# Rice packages (official repositories / CachyOS). Install: bash ~/rice/instalar.sh --packages
+# session and window management
 i3-wm
+xfwm4
+xfdesktop
+sxhkd
 picom
 xfce4-session
 xfce4-settings
@@ -17,7 +20,7 @@ xfce4-taskmanager
 lightdm
 lightdm-gtk-greeter
 xorg-xrandr
-# apps do dia a dia
+# everyday apps
 thunar
 thunar-archive-plugin
 thunar-volman
@@ -29,7 +32,7 @@ rofi
 mpv
 blueman
 network-manager-applet
-# tema, wallpaper e cores (o iris-colors vem do AUR)
+# theme, wallpaper, and colors (iris-colors comes from the AUR)
 feh
 jq
 libnotify

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# rice-picom: inicia o picom com o arquivo de configuração adequado ao WM ativo.
+set -uo pipefail
+
+WM="${RICE_WM:-}"
+if [[ -z "$WM" ]]; then
+    if pgrep -x -u "$UID" xfwm4 >/dev/null; then
+        WM="xfwm4"
+    elif pgrep -x -u "$UID" i3 >/dev/null; then
+        WM="i3"
+    elif [[ -f "$HOME/.config/rice/wm" ]]; then
+        WM="$(<"$HOME/.config/rice/wm")"
+    fi
+fi
+
+if [[ "$WM" == "xfwm4" && -f "$HOME/.config/picom/picom-xfwm4.conf" ]]; then
+    exec picom --config "$HOME/.config/picom/picom-xfwm4.conf"
+fi
+
+exec picom --config "$HOME/.config/picom/picom.conf"

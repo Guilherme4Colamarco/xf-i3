@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Xfce + xfwm4
+Comment=XFCE session with the xfwm4 window manager (traditional floating)
+Exec=/home/geko/.local/bin/rice-session xfwm4
+Icon=
+Type=Application
+DesktopNames=XFCE
+Keywords=xfce;xfwm4;session;desktop;

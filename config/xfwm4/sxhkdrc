@@ -1,0 +1,63 @@
+# Atalhos de aplicativos do rice na sessão XFCE + xfwm4.
+# Iniciado pelo bin/rice-wm apenas quando RICE_WM=xfwm4 (não roda no i3).
+
+# terminal e gerenciador de arquivos (apps preferidos do XFCE)
+super + Return
+    exo-open --launch TerminalEmulator
+
+super + e
+    exo-open --launch FileManager
+
+# lançadores
+super + d
+    xfce4-appfinder
+
+super + shift + d
+    rofi -show drun
+
+# wallpaper + cores (iris-wall), histórico do clipboard e monitores
+super + shift + b
+    ~/.local/bin/iris-wall --pick
+
+super + shift + v
+    xfce4-popup-clipman
+
+super + p
+    xfce4-display-settings --minimal
+
+# overview (skippy-xd)
+super + Tab
+    sh -c 'DISPLAY=${DISPLAY%.0} exec skippy-xd --paging'
+
+super + shift + Tab
+    sh -c 'DISPLAY=${DISPLAY%.0} exec skippy-xd --expose'
+
+# brilho do monitor (DDC/CI)
+super + ctrl + minus
+    ~/.local/bin/brilho -10
+
+super + ctrl + equal
+    ~/.local/bin/brilho +10
+
+super + ctrl + shift + minus
+    ~/.local/bin/brilho -2
+
+super + ctrl + shift + equal
+    ~/.local/bin/brilho +2
+
+# bloquear e sair/desligar
+super + Escape
+    xflock4
+
+super + shift + e
+    xfce4-session-logout
+
+# screenshots
+Print
+    xfce4-screenshooter
+
+shift + Print
+    xfce4-screenshooter -r
+
+alt + Print
+    xfce4-screenshooter -w

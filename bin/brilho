@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# brilho: brilho real do monitor (backlight) via DDC/CI, com OSD de notificação.
+# brilho: real monitor brightness (backlight) via DDC/CI, with notification OSD.
 #
-#   brilho up [passo]     aumenta (padrão: 10)
-#   brilho down [passo]   diminui
-#   brilho set N          define N% (0-100)
-#   brilho get            mostra o valor atual
-#   brilho menu           escolhe no rofi (presets)
-#   brilho panel          texto para o plugin genmon do painel (clique abre o menu)
+#   brilho up [step]      increase (default: 10)
+#   brilho down [step]    decrease
+#   brilho set N          set N% (0-100)
+#   brilho get            show current value
+#   brilho menu           pick in rofi (presets)
+#   brilho panel          text for the panel genmon plugin (click opens menu)
 #
-# O DDC é lento (~0,25 s por comando), então o valor fica num cache e um único
-# processo em segundo plano aplica sempre o pedido mais recente: apertar a
-# tecla várias vezes seguidas não enfileira comandos no monitor.
+# DDC is slow (~0.25 s per command), so the value is cached and a single
+# background process always applies the most recent request: pressing the
+# key repeatedly will not queue commands on the monitor.
 set -uo pipefail
 if [[ "${BRILHO_BUS:-3}" == "auto" ]]; then
     DDC=(ddcutil --noverify)
 else
-    DDC=(ddcutil --bus "${BRILHO_BUS:-3}" --noverify)   # AOC AG323FWG3R3 em /dev/i2c-3
+    DDC=(ddcutil --bus "${BRILHO_BUS:-3}" --noverify)   # AOC AG323FWG3R3 on /dev/i2c-3
 fi
 RUN="${XDG_RUNTIME_DIR:-/tmp}/brilho"
 mkdir -p "$RUN"
-CUR="$RUN/atual" TGT="$RUN/alvo" NID="$RUN/notif-id"
+CUR="$RUN/current" TGT="$RUN/target" NID="$RUN/notif-id"
 
 read_monitor() { "${DDC[@]}" getvcp 10 --brief 2>/dev/null | awk '/^VCP 10/{print $4}'; }
 
@@ -38,14 +38,14 @@ osd() {
     local v=$1 id icon=display-brightness-symbolic args=()
     id=$(cat "$NID" 2>/dev/null)
     [[ $id =~ ^[0-9]+$ ]] && args=(-r "$id")
-    id=$(notify-send -a Brilho -i "$icon" -t 1500 -p "${args[@]}" \
+    id=$(notify-send -a Brightness -i "$icon" -t 1500 -p "${args[@]}" \
          -h "int:value:$v" -h string:x-canonical-private-synchronous:brilho \
-         "Brilho" "$v%" 2>/dev/null) && echo "$id" > "$NID"
+         "Brightness" "$v%" 2>/dev/null) && echo "$id" > "$NID"
 }
 
 apply() {
     echo "$1" > "$TGT"; echo "$1" > "$CUR"
-    # um aplicador só; ele segue até o monitor estar no último valor pedido
+    # single applier; it loops until the monitor matches the latest requested value
     (
         flock -n 9 || exit 0
         local last=""
@@ -66,22 +66,22 @@ case "${1:-}" in
         [[ $1 == up ]] && v=$((v + step)) || v=$((v - step))
         v=$(clamp "$v"); apply "$v"; osd "$v" ;;
     set)
-        [[ ${2:-} =~ ^[0-9]+$ ]] || { echo "uso: brilho set 0-100" >&2; exit 1; }
+        [[ ${2:-} =~ ^[0-9]+$ ]] || { echo "usage: brilho set 0-100" >&2; exit 1; }
         v=$(clamp "$2"); apply "$v"; osd "$v" ;;
     get)
-        # lê do monitor de verdade (alguém pode ter usado os botões dele)
+        # read directly from the monitor (someone may have used its physical buttons)
         v=$(read_monitor); [[ $v =~ ^[0-9]+$ ]] && echo "$v" > "$CUR"; echo "${v:-?}" ;;
     menu)
         cur=$(current)
         pick=$(printf '%s\n' 100 90 80 70 60 50 40 30 20 10 0 |
-               sed "s/^$cur\$/$cur  (atual)/; s/^\([0-9]*\)/\1%/" |
-               rofi -dmenu -i -p "Brilho" -theme-str 'window { width: 18%; } listview { lines: 11; }') || exit 0
+               sed "s/^$cur\$/$cur  (current)/; s/^\([0-9]*\)/\1%/" |
+               rofi -dmenu -i -p "Brightness" -theme-str 'window { width: 18%; } listview { lines: 11; }') || exit 0
         v=${pick%%%*}; [[ $v =~ ^[0-9]+$ ]] && { apply "$v"; osd "$v"; } ;;
     panel)
         self="$0"
         [[ "$self" != /* ]] && self="$(command -v brilho || echo "$HOME/.local/bin/brilho")"
         v=$(current)
-        echo "<txt> ☀ $v% </txt><txtclick>$self menu</txtclick><tool>Brilho do monitor: clique para escolher, ou Super+Ctrl+menos / Super+Ctrl+igual</tool>" ;;
+        echo "<txt> ☀ $v% </txt><txtclick>$self menu</txtclick><tool>Monitor brightness: click to choose, or Super+Ctrl+minus / Super+Ctrl+equal</tool>" ;;
     *)
         sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

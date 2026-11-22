@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# rice-wm: XFCE session window manager selector (called by xfce4-session).
+#
+# Selection order:
+#   1. RICE_WM env var (set by the LightDM entry, e.g. rice-session xfwm4)
+#   2. ~/.config/rice/wm file (changed via rice-wm-switch)
+#   3. Default: i3
+set -uo pipefail
+
+WM="${RICE_WM:-}"
+STATE_FILE="$HOME/.config/rice/wm"
+if [[ -z "$WM" && -f "$STATE_FILE" ]]; then
+    WM="$(<"$STATE_FILE")"
+fi
+[[ "$WM" == "xfwm4" ]] || WM="i3"
+export RICE_WM="$WM"
+
+if [[ "$WM" == "xfwm4" ]]; then
+    # ensure xfwm4 compositor is off (picom handles compositing) and 4 clean workspaces
+    if command -v xfconf-query >/dev/null; then
+        xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false 2>/dev/null || true
+        xfconf-query -c xfwm4 -p /general/workspace_count -n -t int -s 4 2>/dev/null || true
+        xfconf-query -c xfwm4 -p /general/workspace_names -n --force-array \
+            -t string -s "1" -t string -s "2" -t string -s "3" -t string -s "4" 2>/dev/null || true
+    fi
+
+    # desktop (icons + right-click menu)
+    if command -v xfdesktop >/dev/null && ! pgrep -x -u "$UID" xfdesktop >/dev/null; then
+        xfdesktop &
+    fi
+
+    # rice app shortcuts in xfwm4 (without touching i3)
+    if command -v sxhkd >/dev/null && [[ -f "$HOME/.config/xfwm4/sxhkdrc" ]] && ! pgrep -x -u "$UID" sxhkd >/dev/null; then
+        sxhkd -c "$HOME/.config/xfwm4/sxhkdrc" &
+    fi
+
+    exec xfwm4
+fi
+
+exec i3

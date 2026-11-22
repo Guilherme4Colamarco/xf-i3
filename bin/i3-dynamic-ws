@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# i3-dynamic-ws: workspaces dinâmicos estilo GNOME/niri.
+# i3-dynamic-ws: GNOME/niri-style dynamic workspaces.
 #
-# Mantém os workspaces numerados 1..9 em sequência, sem buracos: quando um
-# esvazia e some, os seguintes descem um número; um workspace criado fora de
-# ordem (Super+7 com só 3 existentes) vira o próximo da fila. Nomes que não
-# são só um número (ex.: "10:livre") ficam de fora e não mudam.
-# Os atalhos ficam em ~/.local/bin/i3-ws. Iniciado pelo XFCE:
+# Keeps numbered workspaces 1..9 contiguous without gaps: when one empties
+# and disappears, subsequent ones shift down by one; a workspace created out
+# of order (e.g. Super+7 when only 3 exist) becomes the next in line. Names
+# that are not plain numbers (e.g. "10:free") are ignored and left untouched.
+# Keybindings live in ~/.local/bin/i3-ws. Started by XFCE:
 # ~/.config/autostart/i3-dynamic-ws.desktop
 set -uo pipefail
+
+# Only runs when the session is using i3
+[[ "${RICE_WM:-}" == "xfwm4" ]] && exit 0
+pgrep -x -u "$UID" xfwm4 >/dev/null && exit 0
 
 normalize() {
     local i=1 n

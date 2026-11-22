@@ -1,89 +1,89 @@
-# Porte NixOS (Flake + Home Manager)
+# NixOS Port (Flake + Home Manager)
 
-Este diretório empacota o rice **XFCE + i3 (X11) + iris** como um Nix Flake com módulos para **NixOS** e **Home Manager**, além dos pacotes `iris-colors` e `skippy-xd` construídos a partir do upstream.
+This directory packages the **XFCE + i3 (X11) + iris** rice as a Nix Flake with modules for **NixOS** and **Home Manager**, plus `iris-colors` and `skippy-xd` packages built from upstream.
 
-## O que o flake expõe
+## What the flake exposes
 
-- `nixosModules.default` / `nixosModules.xfce-i3`: base do sistema (X11, LightDM com sessão `xfce+i3`, XFCE sem `xfwm4`/`xfdesktop`, `i3`, `xfce4-panel` + plugins, `picom`, `rofi`, `feh`, `adw-gtk3`, `bibata-cursors`, `papirus-icon-theme`, fontes, Thunar, etc.).
-- `homeManagerModules.default` / `homeManagerModules.xfce-i3`: dotfiles (`i3`, `picom`, `rofi`, templates do `iris`, `wireplumber`, `neovim` opcional e stack de terminal com `kitty`, `fish`, `starship`, `yazi`, `cava`, `btop`, `fastfetch`), scripts em wrapper com dependências no `PATH`, arquivos de autostart, fallback inicial em `~/.cache/iris` e seed inicial opcional do XFCE.
-- `packages.<system>.{iris-colors,skippy-xd}` e `overlays.default`.
+- `nixosModules.default` / `nixosModules.xfce-i3`: system base (X11, LightDM with `xfce+i3` session, XFCE without `xfwm4`/`xfdesktop`, `i3`, `xfce4-panel` + plugins, `picom`, `rofi`, `feh`, `adw-gtk3`, `bibata-cursors`, `papirus-icon-theme`, fonts, Thunar, etc.).
+- `homeManagerModules.default` / `homeManagerModules.xfce-i3`: dotfiles (`i3`, `picom`, `rofi`, `iris` templates, `wireplumber`, optional `neovim`, and terminal stack with `kitty`, `fish`, `starship`, `yazi`, `cava`, `btop`, `fastfetch`), wrapped scripts with dependencies on `PATH`, autostart files, initial fallback in `~/.cache/iris`, and optional initial XFCE seed.
+- `packages.<system>.{iris-colors,skippy-xd}` and `overlays.default`.
 - `checks.<system>.{iris-colors,skippy-xd,nixos-eval,nixos-eval-brilho}`.
 
-Sistemas declarados: `x86_64-linux` e `aarch64-linux`.
+Declared systems: `x86_64-linux` and `aarch64-linux`.
 
-## Como usar
+## How to use
 
-Veja o arquivo pronto para copiar em [`example/flake.nix`](./example/flake.nix).
+See the ready-to-copy file in [`example/flake.nix`](./example/flake.nix).
 
-Resumo dos passos no seu `flake.nix` do NixOS:
+Summary of steps in your NixOS `flake.nix`:
 
-1. Adicione o repositório como input (junto com `nixpkgs` `nixos-unstable` e `home-manager`).
-2. Importe `rice.nixosModules.default` nos módulos do sistema e ative `rice.xfce-i3.enable = true;`.
-3. Importe `rice.homeManagerModules.default` nos módulos do usuário no Home Manager e ative `rice.xfce-i3.enable = true;`.
-4. Rode `sudo nixos-rebuild switch --flake .#seu-host`.
+1. Add this repository as an input (alongside `nixpkgs` `nixos-unstable` and `home-manager`).
+2. Import `rice.nixosModules.default` in your system modules and enable `rice.xfce-i3.enable = true;`.
+3. Import `rice.homeManagerModules.default` in your Home Manager user modules and enable `rice.xfce-i3.enable = true;`.
+4. Run `sudo nixos-rebuild switch --flake .#your-host`.
 
-## Primeiro login
+## First login
 
-- No LightDM, a sessão padrão configurada é **`xfce+i3`** (inicia os serviços do XFCE com o `i3` como gerenciador de janelas).
-- Antes do primeiro wallpaper, o Home Manager cria um tema neutro escuro inicial em `~/.cache/iris/` e `~/.local/share/themes/Iris-A/` (apenas se ainda não existirem), para que `i3`, `rofi`, `kitty`, `btop` e `skippy-xd` abram sem erros.
-- Pressione **`Super+Shift+b`** (ou rode `iris-wall --pick` / `iris-wall caminho/da/imagem`) para escolher um wallpaper e gerar a paleta de cores da sessão. Por padrão o `iris-wall` procura imagens em `~/Imagens/Wallpapers`, `~/Pictures/Wallpapers`, `~/Wallpapers` e nos diretórios listados em `wallpaperDirs`.
+- In LightDM, the configured default session is **`xfce+i3`** (starts XFCE services with `i3` as the window manager).
+- Before the first wallpaper, Home Manager creates an initial neutral dark theme in `~/.cache/iris/` and `~/.local/share/themes/Iris-A/` (only if they don't already exist), so `i3`, `rofi`, `kitty`, `btop`, and `skippy-xd` open without errors.
+- Press **`Super+Shift+b`** (or run `iris-wall --pick` / `iris-wall path/to/image`) to pick a wallpaper and generate the session color palette. By default, `iris-wall` searches for images in `~/Imagens/Wallpapers`, `~/Pictures/Wallpapers`, `~/Wallpapers`, and the directories listed in `wallpaperDirs`.
 
-## Notas importantes
+## Important notes
 
-### Não ative `gtk.enable = true` no Home Manager
+### Do not enable `gtk.enable = true` in Home Manager
 
-O `iris-wall` alterna o tema GTK 3 ao vivo entre os slots `Iris-A` e `Iris-B` em `~/.local/share/themes/`, além de gravar `~/.config/gtk-3.0/settings.ini` e `~/.config/gtk-4.0/{gtk.css,settings.ini}`. Gerenciar esses arquivos pelo Home Manager criaria symlinks somente leitura que bloqueiam a troca de cores ao vivo.
+`iris-wall` switches the GTK 3 theme live between the `Iris-A` and `Iris-B` slots in `~/.local/share/themes/`, and also writes `~/.config/gtk-3.0/settings.ini` and `~/.config/gtk-4.0/{gtk.css,settings.ini}`. Managing those files through Home Manager would create read-only symlinks that block live color switching.
 
-### Como funciona o `seedXfce`
+### How `seedXfce` works
 
-Quando `seedXfce = true` (padrão), a ativação do Home Manager copia configurações iniciais higienizadas do painel, notificações, atalhos, `xsettings.xml`, `uca.xml` do Thunar e `helpers.rc` **apenas se o arquivo de destino ainda não existir**. Depois do primeiro login você pode alterar o painel, DPI ou atalhos normalmente pelas janelas do XFCE.
+When `seedXfce = true` (default), Home Manager activation copies sanitized initial configs for the panel, notifications, shortcuts, `xsettings.xml`, Thunar's `uca.xml`, and `helpers.rc` **only if the target file does not exist yet**. After the first login you can change the panel, DPI, or shortcuts normally through XFCE's GUI.
 
-### Controle de brilho via DDC/CI (`enableBrilho`)
+### Brightness control via DDC/CI (`enableBrilho`)
 
-Quando `enableBrilho = true`:
+When `enableBrilho = true`:
 
-- O módulo NixOS ativa `hardware.i2c.enable = true` e instala `ddcutil`.
-- Adicione seu usuário ao grupo **`i2c`** (`users.users.<nome>.extraGroups = [ "i2c" ];`) para acessar `/dev/i2c-*` sem `root`.
-- Se você tiver mais de um monitor, pode fixar o barramento em `brilhoBus` (no Home Manager); com `brilhoBus = null` (padrão), o `brilho` usa detecção automática do `ddcutil`.
+- The NixOS module enables `hardware.i2c.enable = true` and installs `ddcutil`.
+- Add your user to the **`i2c`** group (`users.users.<name>.extraGroups = [ "i2c" ];`) to access `/dev/i2c-*` without `root`.
+- If you have more than one monitor, you can pin the bus in `brilhoBus` (in Home Manager); with `brilhoBus = null` (default), `brilho` uses `ddcutil` auto-detection.
 
-## Opções dos módulos
+## Module options
 
-### Módulo NixOS (`rice.xfce-i3.*`)
+### NixOS Module (`rice.xfce-i3.*`)
 
-| Opção | Tipo | Padrão | Descrição |
+| Option | Type | Default | Description |
 |---|---|---|---|
-| `enable` | `bool` | `false` | Habilita o ambiente XFCE + i3 e pacotes base. |
-| `enableDisplayManager` | `bool` | `true` | Habilita LightDM (GTK greeter) e sessão padrão `xfce+i3`. |
-| `enableBrilho` | `bool` | `false` | Ativa `hardware.i2c` e instala `ddcutil`. |
-| `installFonts` | `bool` | `true` | Instala `noto-fonts`, `nerd-fonts.jetbrains-mono` e `nerd-fonts.space-mono`. |
-| `installExtraApps` | `bool` | `true` | Instala aplicativos extras (`mpv` e `file-roller`). |
-| `enableTerminalStack` | `bool` | `true` | Habilita `programs.fish` no sistema. |
+| `enable` | `bool` | `false` | Enables the XFCE + i3 environment and base packages. |
+| `enableDisplayManager` | `bool` | `true` | Enables LightDM (GTK greeter) and default `xfce+i3` session. |
+| `enableBrilho` | `bool` | `false` | Enables `hardware.i2c` and installs `ddcutil`. |
+| `installFonts` | `bool` | `true` | Installs `noto-fonts`, `nerd-fonts.jetbrains-mono`, and `nerd-fonts.space-mono`. |
+| `installExtraApps` | `bool` | `true` | Installs extra apps (`mpv` and `file-roller`). |
+| `enableTerminalStack` | `bool` | `true` | Enables `programs.fish` system-wide. |
 
-### Módulo Home Manager (`rice.xfce-i3.*`)
+### Home Manager Module (`rice.xfce-i3.*`)
 
-| Opção | Tipo | Padrão | Descrição |
+| Option | Type | Default | Description |
 |---|---|---|---|
-| `enable` | `bool` | `false` | Ativa dotfiles, scripts e seeds do usuário. |
-| `enableTerminalStack` | `bool` | `true` | Instala `kitty`, `fish`, `starship`, `zoxide`, `fzf`, `eza`, `fd`, `btop`, `fastfetch`, `yazi`, `cava` e `TERMINAL=kitty`. |
-| `enableNeovim` | `bool` | `true` | Instala `neovim` com a config LazyVim (`lazy-lock.json` semeado como gravável). |
-| `enableBrilho` | `bool` | `false` | Instala o script `brilho` e adiciona o indicador `genmon` ao seed do painel. |
-| `brilhoBus` | `nullOr int` | `null` | Barramento I2C do monitor (`null` usa detecção automática). |
-| `dpi` | `nullOr int` | `null` | DPI inicial gravado em `xsettings.xml` (ex.: `125`). |
-| `cursorTheme` | `str` | `"Bibata-Modern-Ice"` | Tema de cursor inicial no seed do XFCE. |
-| `cursorSize` | `int` | `24` | Tamanho inicial do cursor no seed do XFCE. |
-| `iconTheme` | `str` | `"Papirus"` | Tema de ícones inicial no seed do XFCE. |
-| `kitty.fontFamily` | `str` | `"JetBrainsMono Nerd Font"` | Fonte em `~/.config/kitty/current-font.conf`. |
-| `kitty.fontSize` | `int \| float` | `12` | Tamanho da fonte em `~/.config/kitty/current-font.conf`. |
-| `fastfetch.logo` | `str` | `"NixOS_small"` | Logo embutido do `fastfetch`. |
-| `wallpaperDirs` | `listOf str` | `[]` | Diretórios extras para o seletor do `iris-wall`. |
-| `initialWallpaper` | `nullOr path` | `null` | Wallpaper gravado em `~/.cache/iris/wallpaper` se não houver estado salvo. |
-| `seedXfce` | `bool` | `true` | Semeia configs iniciais do XFCE/Thunar apenas se faltarem. |
-| `webBrowser` | `nullOr str` | `null` | Navegador padrão inicial gravado em `~/.config/xfce4/helpers.rc`. |
-| `extraI3Config` | `lines` | `""` | Linhas extras anexadas ao final de `~/.config/i3/config`. |
+| `enable` | `bool` | `false` | Enables user dotfiles, scripts, and seeds. |
+| `enableTerminalStack` | `bool` | `true` | Installs `kitty`, `fish`, `starship`, `zoxide`, `fzf`, `eza`, `fd`, `btop`, `fastfetch`, `yazi`, `cava`, and `TERMINAL=kitty`. |
+| `enableNeovim` | `bool` | `true` | Installs `neovim` with LazyVim config (`lazy-lock.json` seeded as writable). |
+| `enableBrilho` | `bool` | `false` | Installs the `brilho` script and adds the `genmon` indicator to the panel seed. |
+| `brilhoBus` | `nullOr int` | `null` | Monitor I2C bus (`null` uses auto-detection). |
+| `dpi` | `nullOr int` | `null` | Initial DPI written to `xsettings.xml` (e.g. `125`). |
+| `cursorTheme` | `str` | `"Bibata-Modern-Ice"` | Initial cursor theme in the XFCE seed. |
+| `cursorSize` | `int` | `24` | Initial cursor size in the XFCE seed. |
+| `iconTheme` | `str` | `"Papirus"` | Initial icon theme in the XFCE seed. |
+| `kitty.fontFamily` | `str` | `"JetBrainsMono Nerd Font"` | Font in `~/.config/kitty/current-font.conf`. |
+| `kitty.fontSize` | `int \| float` | `12` | Font size in `~/.config/kitty/current-font.conf`. |
+| `fastfetch.logo` | `str` | `"NixOS_small"` | Built-in `fastfetch` logo. |
+| `wallpaperDirs` | `listOf str` | `[]` | Extra directories for the `iris-wall` picker. |
+| `initialWallpaper` | `nullOr path` | `null` | Wallpaper written to `~/.cache/iris/wallpaper` if no saved state exists. |
+| `seedXfce` | `bool` | `true` | Seeds initial XFCE/Thunar configs only if missing. |
+| `webBrowser` | `nullOr str` | `null` | Initial default browser written to `~/.config/xfce4/helpers.rc`. |
+| `extraI3Config` | `lines` | `""` | Extra lines appended to the end of `~/.config/i3/config`. |
 
-## Verificar e compilar
+## Check and build
 
-Em uma máquina com Nix + flakes habilitados e `nix-daemon` ativo:
+On a machine with Nix + flakes enabled and `nix-daemon` running:
 
 ```sh
 nix flake check

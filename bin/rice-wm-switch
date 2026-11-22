@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# rice-wm-switch: toggles the default WM of "Xfce Session" (i3 or xfwm4).
+#
+# Usage:
+#   rice-wm-switch status   shows the saved default and currently running WM
+#   rice-wm-switch i3       sets i3 as default
+#   rice-wm-switch xfwm4    sets xfwm4 as default
+set -euo pipefail
+
+STATE_DIR="$HOME/.config/rice"
+STATE_FILE="$STATE_DIR/wm"
+
+cur_default="i3"
+[[ -f "$STATE_FILE" ]] && cur_default="$(<"$STATE_FILE")"
+[[ "$cur_default" == "xfwm4" ]] || cur_default="i3"
+
+running="none"
+if pgrep -x -u "$UID" i3 >/dev/null; then
+    running="i3"
+elif pgrep -x -u "$UID" xfwm4 >/dev/null; then
+    running="xfwm4"
+fi
+
+case "${1:-status}" in
+    status)
+        echo "Saved default (Xfce Session): $cur_default"
+        echo "Running in this session:      $running"
+        ;;
+    i3|xfwm4)
+        mkdir -p "$STATE_DIR"
+        printf '%s\n' "$1" > "$STATE_FILE"
+        echo "Default changed to: $1"
+        echo "Log out and back in (or choose 'Xfce + xfwm4' in LightDM) to apply."
+        ;;
+    *)
+        echo "Usage: rice-wm-switch [i3|xfwm4|status]" >&2
+        exit 1
+        ;;
+esac

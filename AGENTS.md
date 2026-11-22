@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal desktop "rice" (dotfiles) for CachyOS/Arch: **i3** manages windows, **XFCE** provides everything else (panel, tray, notifications, power, lock, settings, Thunar), and **iris** (`iris-colors`, AUR) generates a color palette from the wallpaper that themes the whole session. There is no build system or test suite; the code is bash scripts plus config files. Comments, UI strings and docs are in Brazilian Portuguese; keep that convention. `LEIA-ME.md` is the user-facing README (keybinding table, daily usage) — keep it in sync when changing shortcuts or adding files.
+A personal desktop "rice" (dotfiles) for CachyOS/Arch: **i3** manages windows, **XFCE** provides everything else (panel, tray, notifications, power, lock, settings, Thunar), and **iris** (`iris-colors`, AUR) generates a color palette from the wallpaper that themes the whole session. There is no build system or test suite; the code is bash scripts plus config files. Comments, UI strings, and docs are in English; keep that convention. `README.md` is the user-facing README (keybinding table, daily usage) — keep it in sync when changing shortcuts or adding files.
 
 This directory is not a git repository.
 

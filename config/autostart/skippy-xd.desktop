@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Overview (skippy-xd)
-Comment=Daemon do overview: guarda miniaturas das janelas para o Super+Tab
+Comment=Overview daemon: keeps window thumbnails for Super+Tab
 Exec=sh -c "DISPLAY=\\${DISPLAY%%.0} exec skippy-xd --start-daemon"
 Icon=preferences-system-windows
 OnlyShowIn=XFCE;

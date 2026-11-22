@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# i3-ws: atalhos dos workspaces dinâmicos (ver i3-dynamic-ws).
-#   new        vai para um workspace vazio novo, no fim da fila
-#   move-new   leva a janela focada para um workspace novo e vai junto
-#   next/prev  próximo/anterior; "next" no último (com janela) cria um vazio
-#   move-next/move-prev  leva a janela para o próximo/anterior e vai junto
+# i3-ws: dynamic workspace keybinding actions (see i3-dynamic-ws).
+#   new        go to a new empty workspace at the end of the queue
+#   move-new   move focused window to a new workspace and follow it
+#   next/prev  next/previous; "next" on the last (with windows) creates an empty one
+#   move-next/move-prev  move window to next/previous and follow it
 set -uo pipefail
 MAX=9
 ws=$(i3-msg -t get_workspaces)
 count=$(jq '[.[] | select(.name | test("^[0-9]+$")) | select(.num >= 1 and .num <= 9)] | length' <<<"$ws")
 cur=$(jq -r '.[] | select(.focused) | .name' <<<"$ws")
 cur_num=$(jq -r '.[] | select(.focused) | .num' <<<"$ws")
-# o workspace atual tem alguma janela?
+# does the current workspace have any windows?
 cur_has_win=$(i3-msg -t get_tree | jq --arg ws "$cur" '
     [.. | objects | select(.type == "workspace" and .name == $ws)
      | (.nodes, .floating_nodes) | .. | objects | select(.window? != null)] | length > 0')
 dynamic=0; [[ "$cur" =~ ^[0-9]+$ ]] && ((cur_num >= 1 && cur_num <= MAX)) && dynamic=1
 
-limit() { command -v notify-send >/dev/null && notify-send -a i3 -t 1500 "Workspaces" "Limite de $MAX workspaces" || true; }
+limit() { command -v notify-send >/dev/null && notify-send -a i3 -t 1500 "Workspaces" "Limit of $MAX workspaces" || true; }
 
-# próximo workspace "novo": se o atual já é o vazio do fim, fica nele
+# next "new" workspace: if current is already the trailing empty one, stay on it
 new_target() {
     if ((dynamic)) && [[ $cur_has_win == false ]] && ((cur_num == count)); then echo "$cur_num"
     else echo $((count + 1)); fi
@@ -41,7 +41,7 @@ case "${1:-}" in
         if [[ $1 == next ]]; then i3-msg -q "workspace number $t"
         else i3-msg -q "move container to workspace number $t; workspace number $t"; fi ;;
     prev|move-prev)
-        if ((!dynamic)); then t=$count        # do "10:livre" volta para o último
+        if ((!dynamic)); then t=$count        # from "10:free" go back to the last one
         else t=$((cur_num - 1)); fi
         ((t >= 1)) || exit 0
         if [[ $1 == prev ]]; then i3-msg -q "workspace number $t"

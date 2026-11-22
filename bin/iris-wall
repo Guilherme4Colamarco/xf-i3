@@ -88,11 +88,18 @@ mkdir -p "$CACHE"
 exec 9>"$CACHE/.lock"
 flock -n 9 || die "já tem um iris-wall rodando"
 
-# 1. wallpaper (o xfdesktop não roda sob o i3; o feh pinta a janela raiz)
+# 1. wallpaper (feh para o i3; xfdesktop quando estiver ativo no xfwm4)
 if command -v feh >/dev/null; then
     feh --no-fehbg --bg-fill "$img"
 else
     echo "iris-wall: feh não instalado, só as cores serão aplicadas" >&2
+fi
+if command -v xfconf-query >/dev/null; then
+    while IFS= read -r prop; do
+        [[ -n "$prop" ]] || continue
+        xfconf-query -c xfce4-desktop -p "$prop" -s "$img" 2>/dev/null || true
+        xfconf-query -c xfce4-desktop -p "${prop%/last-image}/image-style" -n -t int -s 5 2>/dev/null || true
+    done < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep '/last-image$' || true)
 fi
 printf '%s\n' "$img" > "$STATE"
 
@@ -128,6 +135,58 @@ EOF
 xfconf-query -c xsettings -p /Net/ThemeName -n -t string -s "$slot"
 xfconf-query -c xfce4-notifyd -p /theme -n -t string -s "$slot"
 xfconf-query -c xfce4-panel -p /panels/dark-mode -n -t bool -s "$dark"
+
+# 3b. Tema flat dinâmico para o xfwm4 (ignorado pelo i3)
+bg=$(jq -r '.bg' "$CACHE/colors.json")
+surface=$(jq -r '.surface' "$CACHE/colors.json")
+fg=$(jq -r '.fg' "$CACHE/colors.json")
+dim=$(jq -r '.dim' "$CACHE/colors.json")
+accent=$(jq -r '.accent' "$CACHE/colors.json")
+mkdir -p "$sdir/xfwm4"
+cat > "$sdir/xfwm4/themerc" <<EOF
+active_text_color=$fg
+inactive_text_color=$dim
+active_border_color=$accent
+inactive_border_color=$surface
+active_color_1=$bg
+active_color_2=$bg
+inactive_color_1=$surface
+inactive_color_2=$surface
+full_width_title=true
+title_alignment=center
+title_horizontal_offset=0
+title_vertical_offset_active=0
+title_vertical_offset_inactive=0
+button_offset=6
+button_spacing=4
+maximized_offset=0
+show_app_icon=false
+EOF
+write_solid_xpm() {
+    local file="$1" w="$2" h="$3" col="$4" row=""
+    printf -v row '%*s' "$w" ''
+    row="${row// /.}"
+    {
+        printf '/* XPM */\nstatic char *x[] = {\n"%d %d 1 1",\n". c %s",\n' "$w" "$h" "$col"
+        for ((i = 0; i < h; i++)); do
+            printf '"%s"%s\n' "$row" "$( ((i + 1 < h)) && echo ',' || echo '' )"
+        done
+        printf '};\n'
+    } > "$file"
+}
+for idx in 1 2 3 4 5; do
+    write_solid_xpm "$sdir/xfwm4/title-${idx}-active.xpm" 8 28 "$bg"
+    write_solid_xpm "$sdir/xfwm4/title-${idx}-inactive.xpm" 8 28 "$surface"
+done
+for side in top-left top-right; do
+    write_solid_xpm "$sdir/xfwm4/${side}-active.xpm" 6 28 "$bg"
+    write_solid_xpm "$sdir/xfwm4/${side}-inactive.xpm" 6 28 "$surface"
+done
+for side in left right bottom bottom-left bottom-right; do
+    write_solid_xpm "$sdir/xfwm4/${side}-active.xpm" 2 2 "$accent"
+    write_solid_xpm "$sdir/xfwm4/${side}-inactive.xpm" 2 2 "$surface"
+done
+xfconf-query -c xfwm4 -p /general/theme -n -t string -s "$slot"
 
 # 4. GTK 4 / libadwaita + apps que leem gsettings ou o portal
 mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"

@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
-# instalar.sh: coloca o rice no lugar.
+# instalar.sh: puts the rice in place.
 #
-#   bash ~/rice/instalar.sh            cria os links de ~/.config, ~/.local/bin etc. para cá
-#   bash ~/rice/instalar.sh --xfce     também restaura o snapshot do XFCE (painel, DPI, sessão
-#                                      com i3, atalhos, notificações, Thunar, apps padrão)
-#   bash ~/rice/instalar.sh --pacotes  instala os pacotes do rice (pacman + AUR via yay)
+#   bash ~/rice/instalar.sh             creates symlinks from ~/.config, ~/.local/bin, etc. to here
+#   bash ~/rice/instalar.sh --xfce      also restores the XFCE snapshot (panel, DPI, session
+#                                       with i3, shortcuts, notifications, Thunar, default apps)
+#   bash ~/rice/instalar.sh --packages  installs the rice packages (pacman + AUR via yay)
+#                                       (--pacotes is also accepted as an alias)
 #
-# Seguro de rodar de novo: links certos ficam como estão; um arquivo de verdade
-# que estiver no caminho vai para ~/rice/.antes/ antes de virar link.
+# Safe to re-run: existing correct links stay as they are; any real file
+# in the way is moved to ~/rice/.antes/ before being replaced with a link.
 set -euo pipefail
 R="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
-# origem (no rice)                            destino (na home)
+# source (in rice)                             destination (in home)
 LINKS=(
   "config/i3/config                           .config/i3/config"
   "config/picom/picom.conf                    .config/picom/picom.conf"
+  "config/picom/picom-xfwm4.conf              .config/picom/picom-xfwm4.conf"
+  "config/xfwm4/sxhkdrc                       .config/xfwm4/sxhkdrc"
   "config/rofi/config.rasi                    .config/rofi/config.rasi"
   "config/kitty/kitty.conf                    .config/kitty/kitty.conf"
   "config/kitty/current-font.conf             .config/kitty/current-font.conf"
@@ -46,57 +49,64 @@ LINKS=(
   "bin/i3-dynamic-ws                          .local/bin/i3-dynamic-ws"
   "bin/i3-desktop-mode                        .local/bin/i3-desktop-mode"
   "bin/i3-xfce-wsnames                        .local/bin/i3-xfce-wsnames"
+  "bin/rice-session                           .local/bin/rice-session"
+  "bin/rice-wm                                .local/bin/rice-wm"
+  "bin/rice-wm-switch                         .local/bin/rice-wm-switch"
+  "bin/rice-picom                             .local/bin/rice-picom"
   "applications/xfce-backdrop-settings.desktop .local/share/applications/xfce-backdrop-settings.desktop"
 )
 
 link() {
     local src="$R/$1" dst="$HOME/$2"
-    [ -e "$src" ] || { echo "  !! falta no rice: $1"; return; }
+    [ -e "$src" ] || { echo "  !! missing in rice: $1"; return; }
     mkdir -p "$(dirname "$dst")"
     if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then return; fi
     if [ -e "$dst" ] || [ -L "$dst" ]; then
         mkdir -p "$R/.antes/$(dirname "$2")"
         mv "$dst" "$R/.antes/$2.$(date +%Y%m%d-%H%M%S)"
-        echo "  guardado em .antes/: ~/$2"
+        echo "  backed up to .antes/: ~/$2"
     fi
     ln -s "$src" "$dst"
-    echo "  ligado: ~/$2"
+    echo "  linked: ~/$2"
 }
 
 xfce_restore() {
-    local X="$R/xfce" P="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
-    [ -d "$X/xfconf" ] || { echo "  !! sem snapshot em $X (rode salvar-xfce.sh numa máquina já configurada)"; return; }
-    echo "==> restaurando o snapshot do XFCE"
-    mkdir -p "$P" "$HOME/.config/xfce4/panel" "$HOME/.config/Thunar"
-    cp -v "$X"/xfconf/*.xml "$P/"
-    cp -rv "$X"/panel/. "$HOME/.config/xfce4/panel/"
-    cp -v "$X/helpers.rc" "$HOME/.config/xfce4/helpers.rc"
-    cp -v "$X/uca.xml" "$HOME/.config/Thunar/uca.xml"
-    cp -v "$X/mimeapps.list" "$HOME/.config/mimeapps.list"
-    # o xfconfd relê os XML na próxima vez que alguém pedir um valor
+    local X="$R/xfce"
+    [ -d "$X/xfconf" ] || { echo "  !! no snapshot in $X (run salvar-xfce.sh on a configured machine)"; return; }
+    echo "==> linking XFCE configs via symlink"
+    link "xfce/xfconf"       ".config/xfce4/xfconf/xfce-perchannel-xml"
+    link "xfce/panel"        ".config/xfce4/panel"
+    link "xfce/helpers.rc"   ".config/xfce4/helpers.rc"
+    link "xfce/uca.xml"      ".config/Thunar/uca.xml"
+    link "xfce/mimeapps.list" ".config/mimeapps.list"
+    # xfconfd reloads XMLs the next time a value is requested
     pkill -x xfconfd 2>/dev/null || true
     pgrep -x xfce4-panel >/dev/null && xfce4-panel -r || true
-    echo "  feito. Faça logout/login para a sessão subir com o i3."
+    echo "  done. Log out and back in for the session to start with i3."
 }
 
 pacotes() {
-    echo "==> pacotes do repositório"
+    echo "==> repository packages"
     sudo pacman -S --needed $(grep -vE '^\s*(#|$)' "$R/pacotes.txt")
-    echo "==> pacotes do AUR"
+    echo "==> AUR packages"
     yay -S --needed $(grep -vE '^\s*(#|$)' "$R/pacotes-aur.txt")
+    if [ -f "$R/xsessions/xfce-xfwm4.desktop" ]; then
+        echo "==> LightDM session (Xfce + xfwm4)"
+        sudo install -m 644 "$R/xsessions/xfce-xfwm4.desktop" /usr/share/xsessions/xfce-xfwm4.desktop
+    fi
 }
 
-for a in "$@"; do [ "$a" = --pacotes ] && pacotes; done
+for a in "$@"; do [[ "$a" = --pacotes || "$a" = --packages ]] && pacotes; done
 
 echo "==> links"
 for l in "${LINKS[@]}"; do read -r src dst <<<"$l"; link "$src" "$dst"; done
 
 for a in "$@"; do [ "$a" = --xfce ] && xfce_restore; done
 
-# aplica na hora se a sessão já estiver rodando
+# apply immediately if the session is already running
 if pgrep -x i3 >/dev/null; then
-    i3-msg -q reload && echo "==> i3 recarregado"
-    "$HOME/.local/bin/iris-wall" --restore >/dev/null 2>&1 && echo "==> cores do iris reaplicadas" || true
+    i3-msg -q reload && echo "==> i3 reloaded"
+    "$HOME/.local/bin/iris-wall" --restore >/dev/null 2>&1 && echo "==> iris colors reapplied" || true
     pkill -USR1 -x picom 2>/dev/null || true
 fi
-echo "Pronto."
+echo "Done."
